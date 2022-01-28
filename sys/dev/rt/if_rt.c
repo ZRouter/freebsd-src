@@ -101,6 +101,7 @@ __FBSDID("$FreeBSD$");
 
 #define RT_CHIPID_RT2880 0x2880
 #define RT_CHIPID_RT3050 0x3050
+#define RT_CHIPID_RT3883 0x3883
 #define RT_CHIPID_RT5350 0x5350
 #define RT_CHIPID_MT7620 0x7620
 #define RT_CHIPID_MT7621 0x7621
@@ -111,7 +112,7 @@ static const struct ofw_compat_data rt_compat_data[] = {
 	{ "ralink,rt2880-eth",		RT_CHIPID_RT2880 },
 	{ "ralink,rt3050-eth",		RT_CHIPID_RT3050 },
 	{ "ralink,rt3352-eth",		RT_CHIPID_RT3050 },
-	{ "ralink,rt3883-eth",		RT_CHIPID_RT3050 },
+	{ "ralink,rt3883-eth",		RT_CHIPID_RT3883 },
 	{ "ralink,rt5350-eth",		RT_CHIPID_RT5350 },
 	{ "ralink,mt7620a-eth",		RT_CHIPID_MT7620 },
 	{ "mediatek,mt7620-eth",	RT_CHIPID_MT7620 },
@@ -481,6 +482,8 @@ rt_attach(device_t dev)
 
 	if (sc->rt_chipid == RT_CHIPID_RT2880)
 		RT_WRITE(sc, MDIO_CFG, MDIO_2880_100T_INIT);
+	if (sc->rt_chipid == RT_CHIPID_RT3883)
+		RT_WRITE(sc, MDIO_CFG, MDIO_2880_GIGA_INIT);
 
 	/* allocate Tx and Rx rings */
 	for (i = 0; i < RT_SOFTC_TX_RING_COUNT; i++) {
