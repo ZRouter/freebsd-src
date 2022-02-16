@@ -151,9 +151,13 @@ static int
 ar71xx_gpio_oe_is_high(void)
 {
 	switch (ar71xx_soc) {
+	case AR71XX_SOC_AR9341:
+	case AR71XX_SOC_AR9342:
 	case AR71XX_SOC_AR9344:
 	case AR71XX_SOC_QCA9533:
 	case AR71XX_SOC_QCA9533_V2:
+	case AR71XX_SOC_QCA9556:
+	case AR71XX_SOC_QCA9558:
 		return 0;
 	default:
 		return 1;
