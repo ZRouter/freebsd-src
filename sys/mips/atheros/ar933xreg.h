@@ -99,4 +99,8 @@
 #define	AR933X_PLL_VAL_100			0x00001099
 #define	AR933X_PLL_VAL_10			0x00991099
 
+#define	AR933X_GPIO_FUNCTION_2			0x30
+
+#define	AR933X_STEREO_CLK_DIV			0x1c
+
 #endif	/* __AR93XX_REG_H__ */

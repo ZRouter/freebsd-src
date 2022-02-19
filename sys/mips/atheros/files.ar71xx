@@ -33,3 +33,6 @@ mips/atheros/qca955x_chip.c	standard
 mips/atheros/ar71xx_fixup.c	optional ar71xx_ath_eeprom
 mips/atheros/qca955x_apb.c	optional qca955x_apb
 mips/atheros/qca955x_pci.c	optional qca955x_pci pci
+
+mips/atheros/ar71xx_pcm.c	optional ar71xx_pcm
+mips/atheros/ar71xx_pcm_pll.c	optional ar71xx_pcm
