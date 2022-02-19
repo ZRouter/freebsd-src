@@ -108,19 +108,15 @@ int reg;
 	/* Set DPLL regs */
 	/* set phase shift */
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
-	device_printf(dev, "MORIMORI DPLL3 %x\n", reg);
 	reg = reg & ~(0x7f << 23);
 	reg = reg | (cfg->shift << 23);
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL3_REG, reg);
-	device_printf(dev, "MORIMORI DPLL3 %x\n", reg);
 
 	/* get gains */
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL2_REG);
-	device_printf(dev, "MORIMORI DPLL2 %x\n", reg);
 	reg = reg & ~((0xf << 26) | (0x7f << 19));
 	reg = reg | (cfg->ki << 26) | (cfg->kd << 19);
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL2_REG, reg);
-	device_printf(dev, "MORIMORI DPLL2 %x\n", reg);
 
 
 	/* do meas clear and set */
@@ -156,7 +152,9 @@ int reg;
 	ath79_audiodpll_do_meas_clear();
 	ath79_audiodpll_do_meas_set();
 
+/*
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
 	reg = (reg & 0x007ffff8) >> 3;
 	device_printf(dev, "MORIMORI SQSUM_DVC %x\n", reg);
+*/
 }

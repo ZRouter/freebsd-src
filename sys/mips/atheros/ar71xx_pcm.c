@@ -334,7 +334,6 @@ ar71xx_pcm_start(struct sc_pcminfo *scp)
 
 	reg = ATH_READ_REG(AR71XX_MBOX_INT_STATUS);
 	ATH_WRITE_REG(AR71XX_MBOX_INT_STATUS, reg);
-	printf("MORIMORI INT %x\n", reg);
 
 	/* do RESET */
 	reg = PCM_READ(sc, AR71XX_STEREO0_CONFIG);
@@ -358,7 +357,6 @@ ar71xx_pcm_stop(struct sc_pcminfo *scp)
 	ATH_WRITE_REG(AR71XX_MBOX_INT_ENABLE, 0);
 	ATH_WRITE_REG(AR71XX_MBOX_DMA_RX_CONTROL, 1 << 2);
 	reg = ATH_READ_REG(AR71XX_MBOX_INT_STATUS);
-	printf("MORIMORI INT %x\n", reg);
 
 	return (0);
 }
@@ -624,7 +622,6 @@ ar71xx_pcm_attach(device_t dev)
 	scp->dev = dev;
 
 	reg = ATH_READ_REG(AR71XX_MBOX_INT_STATUS);
-	printf("MORIMORI start %x\n", reg);
 	/* Setup audio buffer. */
 	err = ar71xx_pcm_dma_setup(sc);
 	if (err != 0) {
