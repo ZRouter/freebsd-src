@@ -75,6 +75,16 @@ int reg;
 	ATH_WRITE_REG(AR71XX_PLL_AUDIO_CONFIG, reg);
 }
 
+static void ath79_pll_powerdown(void)
+{
+int reg;
+
+	reg = ATH_READ_REG(AR71XX_PLL_AUDIO_CONFIG);
+	reg = reg | (1 << 5);
+	ATH_WRITE_REG(AR71XX_PLL_AUDIO_CONFIG, reg);
+}
+
+
 static void ath79_audiodpll_do_meas_clear(void)
 {
 int reg;
@@ -93,8 +103,38 @@ int reg;
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL3_REG, reg);
 }
 
-static void ath79_load_pll_regs(device_t dev,
-    const struct ath79_pll_config *cfg)
+
+static void ath79_audiodpll_range_set(void)
+{
+int reg;
+
+	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL2_REG);
+	reg = reg & ~(1 << 31);
+	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL2_REG, reg);
+	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL2_REG);
+	reg = reg  | (1 << 31);
+	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL2_REG, reg);
+}
+
+
+static bool ath79_audiodpll_meas_done_is_set(void)
+{
+int status;
+
+	status = ATH_READ_REG(AR934X_SRIF_AUD_DPLL4_REG) & (1 << 3);
+	return(status ? 1 : 0);
+}
+
+static int ath79_audiodpll_sqsum_dvc_get(void)
+{
+int reg;
+
+	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
+	reg = (reg & 0x007ffff8) >> 3;
+	return reg;
+}
+
+static void ath79_load_pll_regs(const struct ath79_pll_config *cfg)
 {
 int reg;
 
@@ -105,7 +145,10 @@ int reg;
 	reg = (cfg->divfrac << 11) | (cfg->divint << 1);
 	ATH_WRITE_REG(AR71XX_PLL_AUDIO_MOD, reg);
 
+	ath79_audiodpll_range_set();
+
 	/* Set DPLL regs */
+
 	/* set phase shift */
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
 	reg = reg & ~(0x7f << 23);
@@ -118,22 +161,20 @@ int reg;
 	reg = reg | (cfg->ki << 26) | (cfg->kd << 19);
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL2_REG, reg);
 
-
-	/* do meas clear and set */
-
 }
 
-void ar71xx_pcm_setpll(struct ar71xx_pcm_softc *sc, int freq)
+void ar934x_pcm_setpll(struct ar71xx_pcm_softc *sc, int freq)
 {
 device_t dev;
 const struct ath79_pll_config *cfg;
-int reg;
+int mhz, reg;
  
 	dev = sc->dev;
 
-	if (u_ar71xx_refclk == 25*1000*1000)
+	mhz = u_ar71xx_refclk / (1000 * 1000);
+	if (mhz == 25)
 		cfg = &pll_cfg_25MHz[0];
-	else if (u_ar71xx_refclk == 40*1000*1000)
+	else if (mhz == 40)
 		cfg = &pll_cfg_40MHz[0];
 	else {
 		device_printf(dev, "Unsupported CPU clock\n");
@@ -146,15 +187,25 @@ int reg;
 		++cfg;
 	}
 
-	ath79_load_pll_regs(dev, cfg);
+	if (cfg->rate == 0) {
+		device_printf(dev, "Unsupported frequency %d\n", freq);
+		return;
+	}
 
-	ath79_pll_powerup();
-	ath79_audiodpll_do_meas_clear();
-	ath79_audiodpll_do_meas_set();
+	do {
+		ath79_audiodpll_do_meas_clear();
+		ath79_pll_powerdown();
+		DELAY(100);
 
-/*
-	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
-	reg = (reg & 0x007ffff8) >> 3;
-	device_printf(dev, "MORIMORI SQSUM_DVC %x\n", reg);
-*/
+		ath79_load_pll_regs(cfg);
+
+		ath79_pll_powerup();
+		ath79_audiodpll_do_meas_clear();
+		ath79_audiodpll_do_meas_set();
+
+		while ( ! ath79_audiodpll_meas_done_is_set()) {
+			DELAY(10);
+		}
+	} while (ath79_audiodpll_sqsum_dvc_get() >= 0x40000);
+
 }

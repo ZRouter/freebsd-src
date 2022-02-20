@@ -62,7 +62,7 @@ __FBSDID("$FreeBSD$");
 
 #include <mips/atheros/ar71xx_pcmvar.h>
 
-void ar71xx_pcm_setpll(struct ar933x_pcm_softc *sc, int freq);
+void ar934x_pcm_setpll(struct ar933x_pcm_softc *sc, int freq);
 
 #if 0
 /*
@@ -293,11 +293,16 @@ setup_ring(struct sc_pcminfo *scp)
 		else
 			desc->NextPtr = sc->desc_base_phys + 
 			    sizeof(struct ar71xx_pcm_desc) * (i + 1);
+#if 0
 		 /* 16 Bit, 48 KHz */
 		desc->Ca[0] = 0x02100000;
 		desc->Ca[1] = 0x000000d2;
 		desc->Cb[0] = 0x02200000;
 		desc->Cb[1] = 0x000000d2;
+#endif
+		/* For Dynamic Conf */
+		desc->Ca[0] = 1 << 20;
+		desc->Cb[0] = 2 << 20;
 
 		++desc;
 	}
@@ -420,7 +425,8 @@ static uint32_t ar71xx_pcm_pfmt[] = {
 };
 
 static struct pcmchan_caps ar71xx_pcm_pcaps =
-	{48000, 48000, ar71xx_pcm_pfmt, 0};
+//	{48000, 48000, ar71xx_pcm_pfmt, 0};
+	{32000, 32000, ar71xx_pcm_pfmt, 0};
 
 static struct pcmchan_caps *
 ar71xx_pcmchan_getcaps(kobj_t obj, void *data)
@@ -555,8 +561,8 @@ ar71xx_pcm_configure_clocks(struct ar71xx_pcm_softc *sc)
 		PCM_WRITE(sc, AR933X_STEREO_CLK_DIV, (0x10 << 16) | 0x46AB);
 	} else {
 		/* XXX Other SOC support */
-		pcm_freq = 48000;
-		ar71xx_pcm_setpll(sc, pcm_freq);
+		pcm_freq = 32000;
+		ar934x_pcm_setpll(sc, pcm_freq);
 	}
 
 	device_printf(dev, "Frequency ar71xx_pcm %d\n", (uint32_t)pcm_freq);
