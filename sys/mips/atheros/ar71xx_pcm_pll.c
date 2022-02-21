@@ -90,7 +90,7 @@ static void ath79_audiodpll_do_meas_clear(void)
 int reg;
 
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
-	reg = reg & ~(1 << 30);
+	reg = reg & ~AR934X_DPLL_3_DO_MEAS;
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL3_REG, reg);
 }
 
@@ -99,7 +99,7 @@ static void ath79_audiodpll_do_meas_set(void)
 int reg;
 
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
-	reg = reg | (1 << 30);
+	reg = reg | AR934X_DPLL_3_DO_MEAS;
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL3_REG, reg);
 }
 
@@ -109,10 +109,10 @@ static void ath79_audiodpll_range_set(void)
 int reg;
 
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL2_REG);
-	reg = reg & ~(1 << 31);
+	reg = reg & ~AR934X_DPLL_2_RANGE;
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL2_REG, reg);
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL2_REG);
-	reg = reg  | (1 << 31);
+	reg = reg  | AR934X_DPLL_2_RANGE;
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL2_REG, reg);
 }
 
@@ -121,7 +121,8 @@ static bool ath79_audiodpll_meas_done_is_set(void)
 {
 int status;
 
-	status = ATH_READ_REG(AR934X_SRIF_AUD_DPLL4_REG) & (1 << 3);
+	status = ATH_READ_REG(AR934X_SRIF_AUD_DPLL4_REG) &
+	    AR934X_DPLL_4_MEAS_DONE;
 	return(status ? 1 : 0);
 }
 
@@ -151,14 +152,17 @@ int reg;
 
 	/* set phase shift */
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL3_REG);
-	reg = reg & ~(0x7f << 23);
-	reg = reg | (cfg->shift << 23);
+	reg = reg & ~(AR934X_DPLL_3_PHASESH_MASK <<
+	    AR934X_DPLL_3_PHASESH_SHIFT);
+	reg = reg | (cfg->shift << AR934X_DPLL_3_PHASESH_SHIFT);
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL3_REG, reg);
 
 	/* get gains */
 	reg = ATH_READ_REG(AR934X_SRIF_AUD_DPLL2_REG);
-	reg = reg & ~((0xf << 26) | (0x7f << 19));
-	reg = reg | (cfg->ki << 26) | (cfg->kd << 19);
+	reg = reg & ~(AR934X_DPLL_2_KI_MASK << AR934X_DPLL_2_KI_SHIFT);
+	reg = reg | (cfg->ki << AR934X_DPLL_2_KI_SHIFT);
+	reg = reg & ~(AR934X_DPLL_2_KD_MASK << AR934X_DPLL_2_KD_SHIFT);
+	reg = reg | (cfg->kd << AR934X_DPLL_2_KD_SHIFT);
 	ATH_WRITE_REG(AR934X_SRIF_AUD_DPLL2_REG, reg);
 
 }
