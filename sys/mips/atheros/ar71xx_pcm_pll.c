@@ -171,7 +171,7 @@ void ar934x_pcm_setpll(struct ar71xx_pcm_softc *sc, int freq)
 {
 device_t dev;
 const struct ath79_pll_config *cfg;
-int mhz, reg;
+int mhz;
  
 	dev = sc->dev;
 
@@ -212,4 +212,34 @@ int mhz, reg;
 		}
 	} while (ath79_audiodpll_sqsum_dvc_get() >= 0x40000);
 
+}
+
+int ar934x_pcm_posedge(int freq)
+{
+const struct ath79_pll_config *cfg;
+int mhz;
+int ps;
+
+	ps = 2;   /* default value */
+
+	mhz = u_ar71xx_refclk / (1000 * 1000);
+	if (mhz == 25)
+		cfg = &pll_cfg_25MHz[0];
+	else if (mhz == 40)
+		cfg = &pll_cfg_40MHz[0];
+	else {
+		return ps;
+	}
+
+	while (cfg->rate != 0) {
+		if (cfg->rate == freq)
+			break;
+		++cfg;
+	}
+
+	if (cfg->rate != 0) {
+		ps = cfg->posedge;
+	}
+
+	return ps;
 }

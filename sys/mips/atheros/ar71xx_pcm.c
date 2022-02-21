@@ -63,6 +63,7 @@ __FBSDID("$FreeBSD$");
 #include <mips/atheros/ar71xx_pcmvar.h>
 
 void ar934x_pcm_setpll(struct ar933x_pcm_softc *sc, int freq);
+int ar934x_pcm_posedge(int freq);
 
 #if 0
 /*
@@ -330,7 +331,8 @@ ar71xx_pcm_start(struct sc_pcminfo *scp)
 	/* set POSEDGE */
 	reg = PCM_READ(sc, AR71XX_STEREO0_CONFIG);
 	reg = reg & ~0xf;
-	PCM_WRITE(sc, AR71XX_STEREO0_CONFIG, reg | 3);
+	reg = reg | ar934x_pcm_posedge(sc->sr->speed);
+	PCM_WRITE(sc, AR71XX_STEREO0_CONFIG, reg);
 
 	ATH_WRITE_REG(AR71XX_RST_RESET, (1 << 1));
 	ATH_WRITE_REG(AR71XX_MBOX_FIFO_RESET, (1 << 2));
