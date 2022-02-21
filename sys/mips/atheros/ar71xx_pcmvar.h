@@ -50,7 +50,7 @@
 #define __AR71XX_PCMVAR_H__
 
 #define PCM_RX_RING_COUNT	4
-#define PCM_RX_DMA_SIZE		(192 * 2 * 5) /* fit to spdif block boundary */
+#define PCM_RX_DMA_SIZE		(192 * 4 * 5) /* fit to spdif block boundary */
 
 #define PCM_LOCK(_sc)		mtx_lock(&(_sc)->lock)
 #define PCM_UNLOCK(_sc)	mtx_unlock(&(_sc)->lock)
