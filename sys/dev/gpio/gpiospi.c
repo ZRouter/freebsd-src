@@ -83,10 +83,9 @@ gpio_delay(struct gpio_spi_softc *sc)
 	int d;
 
 	d = sc->sc_freq / 1000000;
-	if (d == 0)
-		d = 1;
 
-	DELAY(d);
+	if (d != 0)
+		DELAY(d);
 }
 
 static int
