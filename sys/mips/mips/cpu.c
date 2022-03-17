@@ -508,7 +508,8 @@ cpu_identify(void)
 
 	/* Print Config3 if it contains any useful info */
 	if (cfg3 & ~(0x80000000))
-		printf("  Config3=0x%b\n", cfg3, "\20\16ULRI\2SmartMIPS\1TraceLogic");
+		printf("  Config3=0x%b\n", cfg3,
+		    "\20\16ULRI\14DSP2P\13DSPP\7VEIC\6VInt\5SP\2SmartMIPS\1TraceLogic");
 
 #if defined(CPU_MIPS1004K) || defined (CPU_MIPS74K) || defined (CPU_MIPS24K)
 	cfg7 = mips_rd_config7();
