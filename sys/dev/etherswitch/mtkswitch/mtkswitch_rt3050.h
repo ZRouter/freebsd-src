@@ -57,6 +57,17 @@
 #define	MTKSWITCH_FPA		0x0084
 #define		FPA_ALL_AUTO	0x00000000
 
+#define	MTKSWITCH_SOCPC		0x008c
+#define		SOCPC_DISUN2C(x)	(1 << (x))
+#define		SOCPC_DISMC2C(x)	((1 << (x)) << 8)
+#define		SOCPC_DISBC2C(x)	((1 << (x)) << 16)
+#define		SOCPC_CRC_PADDING	0x02000000
+
+#define	MTKSWITCH_POC0		0x0090
+#define		POC0_DIS_PORT_MSK	0x0f800000
+#define		POC0_DIS_GPORT1_MSK	0x10000000
+#define		POC0_DIS_GPORT2_MSK	0x20000000
+
 #define	MTKSWITCH_POC2		0x0098
 #define		POC2_UNTAG_PORT(x)	(1 << (x))
 #define		POC2_UNTAG_VLAN		(1 << 15)
@@ -75,6 +86,9 @@
 #define	MTKSWITCH_PCR1		0x00c4
 #define		PCR1_DATA_OFF	16
 #define		PCR1_DATA_MASK	0xffff
+
+#define	MTKSWITCH_FPA2		0x00c8
+#define	MTKSWITCH_FCT2		0x00cc
 
 #define	MTKSWITCH_SGC2		0x00e4
 #define		SGC2_DOUBLE_TAG_PORT(x)	(1 << (x))

@@ -51,6 +51,9 @@
 #include <dev/mii/miivar.h>
 #include <dev/mdio/mdio.h>
 
+#include <dev/fdt/fdt_common.h>
+#include <dev/ofw/ofw_bus.h>
+
 #include <dev/etherswitch/etherswitch.h>
 #include <dev/etherswitch/mtkswitch/mtkswitchvar.h>
 #include <dev/etherswitch/mtkswitch/mtkswitch_rt3050.h>
@@ -124,7 +127,16 @@ mtkswitch_phy_write(device_t dev, int phy, int reg, int val)
 static int
 mtkswitch_reset(struct mtkswitch_softc *sc)
 {
+	phandle_t node;
+	int val;
 
+	node = ofw_bus_get_node(sc->sc_dev);
+
+	if (OF_getencprop(node, "ralink,noreset", &val,
+	    sizeof(val)) >= 0) {
+		if(val == 1)
+			return (0);
+	}
 	MTKSWITCH_LOCK_ASSERT(sc, MA_NOTOWNED);
 	MTKSWITCH_LOCK(sc);
 	MTKSWITCH_WRITE(sc, MTKSWITCH_STRT, STRT_RESET);
@@ -137,11 +149,32 @@ mtkswitch_reset(struct mtkswitch_softc *sc)
 static int
 mtkswitch_hw_setup(struct mtkswitch_softc *sc)
 {
+	phandle_t node;
+	int val;
+
+	node = ofw_bus_get_node(sc->sc_dev);
 
 	/*
 	 * TODO: parse the device tree and see if we need to configure
 	 *       ports, etc. differently. For now we fallback to defaults.
 	 */
+
+	if (OF_getencprop(node, "ralink,fct2", &val,
+	    sizeof(val)) >= 0) {
+		MTKSWITCH_WRITE(sc, MTKSWITCH_FCT2, val);
+	}
+	if (OF_getencprop(node, "ralink,fpa2", &val,
+	    sizeof(val)) >= 0) {
+		MTKSWITCH_WRITE(sc, MTKSWITCH_FPA2, val);
+	}
+	val = MTKSWITCH_READ(sc, MTKSWITCH_POC0);
+	val = val & ~(POC0_DIS_PORT_MSK | POC0_DIS_GPORT1_MSK |
+	    POC0_DIS_GPORT2_MSK);
+	MTKSWITCH_WRITE(sc, MTKSWITCH_POC0, val);
+	MTKSWITCH_WRITE(sc, MTKSWITCH_SOCPC, (SOCPC_CRC_PADDING | 
+	    SOCPC_DISBC2C(MTKSWITCH_CPU_PORT) |
+	    SOCPC_DISMC2C(MTKSWITCH_CPU_PORT) |
+	    SOCPC_DISUN2C(MTKSWITCH_CPU_PORT)));
 
 	/* Called early and hence unlocked */
 	/* Set ports 0-4 to auto negotiation */
