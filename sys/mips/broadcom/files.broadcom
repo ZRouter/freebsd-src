@@ -30,3 +30,23 @@ geom/geom_flashmap.c			standard
 dev/bhnd/cores/usb/bhnd_usb.c		optional usb
 dev/bhnd/cores/usb/bhnd_ehci.c		optional ehci
 dev/bhnd/cores/usb/bhnd_ohci.c		optional ohci
+
+# Mac code
+mips/broadcom/bgmac/bgmac.c		optional bgmac 
+mips/broadcom/bgmac/bgmac_ddb.c		optional bgmac 
+mips/broadcom/bgmac/bgmac_tx.c		optional bgmac
+mips/broadcom/bgmac/bgmac_sysctl.c	optional bgmac
+mips/broadcom/bgmac/bcm_dma.c		optional bgmac
+mips/broadcom/bgmac/bcm_dma_ops.c	optional bgmac
+mips/broadcom/bgmac/bcm_dma_ring.c	optional bgmac
+mips/broadcom/bgmac/bcm_dma_rx.c	optional bgmac
+mips/broadcom/bgmac/bcm_dma_tx.c	optional bgmac
+
+
+# etherswitch code
+dev/etherswitch/robosw/bcm53115.c	optional robosw
+dev/etherswitch/robosw/bcm5325.c	optional robosw
+dev/etherswitch/robosw/bcm5358.c	optional robosw
+dev/etherswitch/robosw/robosw.c		optional robosw
+dev/etherswitch/robosw/robosw_ddb.c	optional robosw
+dev/etherswitch/robosw/robosw_hal.c	optional robosw
