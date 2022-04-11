@@ -180,5 +180,3 @@ static devclass_t mtk_wdog_devclass;
 
 EARLY_DRIVER_MODULE(mtk_wdog_v1, simplebus, mtk_wdog_driver, mtk_wdog_devclass,
     0, 0, BUS_PASS_INTERRUPT + BUS_PASS_ORDER_EARLY);
-
-MODULE_DEPEND(mtk_wdog, mtk_sysctl, 1, 1, 1);
