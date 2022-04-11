@@ -23,6 +23,8 @@ mips/mediatek/mtk_gpio_v1.c 		optional gpio mtk_gpio_v1
 mips/mediatek/mtk_gpio_v2.c 		optional gpio mtk_gpio_v2
 #mips/mediatek/mtk_mmc.c 		optional mmc
 
+mips/mediatek/mtk_wdog_v1.c 		optional mtk_wdog_v1
+
 # Ralink/Mediatek Ethernet driver
 dev/rt/if_rt.c 				optional rt
 
