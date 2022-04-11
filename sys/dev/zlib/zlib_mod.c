@@ -1,5 +1,7 @@
 /*-
- * Copyright (c) 2017 Netflix, Inc.
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * Copyright (c) 2019 The FreeBSD Foundation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +27,27 @@
  * $FreeBSD$
  */
 
-/*
- * different routines to dump data.
- */
+#include <sys/param.h>
+#include <sys/time.h>
+#include <sys/kernel.h>
+#include <sys/module.h>
 
-void asciidump(uint8_t *data, size_t datalen);
-void bindump(uint8_t *data, size_t datalen);
-void efi_print_load_option(uint8_t *, size_t, int, int, int);
-void hexdump(uint8_t *data, size_t datalen);
-void utf8dump(uint8_t *data, size_t datalen);
+static int
+zlib_modevent(module_t mod, int type, void *unused)
+{
+	switch (type) {
+	case MOD_LOAD:
+		return 0;
+	case MOD_UNLOAD:
+		return 0;
+	}
+	return EINVAL;
+}
 
+static moduledata_t zlib_mod = {
+	"zlib",
+	zlib_modevent,
+	0
+};
+DECLARE_MODULE(zlib, zlib_mod, SI_SUB_DRIVERS, SI_ORDER_FIRST);
+MODULE_VERSION(zlib, 1);
