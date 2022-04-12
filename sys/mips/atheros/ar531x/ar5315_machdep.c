@@ -260,6 +260,8 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	printf("  a2 = %08x\n", a2);
 	printf("  a3 = %08x\n", a3);
 
+	strcpy(cpu_model, ar5315_get_system_type());
+
 	/*
 	 * XXX this code is very redboot specific.
 	 */
