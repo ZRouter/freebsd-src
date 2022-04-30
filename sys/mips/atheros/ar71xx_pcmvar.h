@@ -155,9 +155,9 @@ struct ar71xx_pcm_rate {
 };
 
 static struct ar71xx_pcm_rate rate_map[] = {
-//	{ 48000 },
 	{ 32000 },
-	/* TODO: add more frequences */
+	{ 44100 },
+	{ 48000 },
 	{ 0 },
 };
 
