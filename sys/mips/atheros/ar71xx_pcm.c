@@ -427,8 +427,8 @@ static uint32_t ar71xx_pcm_pfmt[] = {
 };
 
 static struct pcmchan_caps ar71xx_pcm_pcaps =
-//	{48000, 48000, ar71xx_pcm_pfmt, 0};
-	{32000, 32000, ar71xx_pcm_pfmt, 0};
+	{48000, 48000, ar71xx_pcm_pfmt, 0};
+//	{32000, 32000, ar71xx_pcm_pfmt, 0};
 
 static struct pcmchan_caps *
 ar71xx_pcmchan_getcaps(kobj_t obj, void *data)
@@ -563,7 +563,8 @@ ar71xx_pcm_configure_clocks(struct ar71xx_pcm_softc *sc)
 		PCM_WRITE(sc, AR933X_STEREO_CLK_DIV, (0x10 << 16) | 0x46AB);
 	} else {
 		/* XXX Other SOC support */
-		pcm_freq = 32000;
+//		pcm_freq = 32000;
+		pcm_freq = 48000;
 		ar934x_pcm_setpll(sc, pcm_freq);
 	}
 
