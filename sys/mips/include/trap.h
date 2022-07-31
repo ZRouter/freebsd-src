@@ -69,6 +69,7 @@
 #define T_C2E                   18      /* Exception from coprocessor 2 */
 #define	T_DWATCH		23	/* Data Watch address reference */
 #define T_MCHECK                24      /* Received an MCHECK */
+#define T_DSP                   26      /* Not enable DSP ASE */
 #define	T_VCED			31	/* Virtual coherency data */
 
 #define	T_USER			0x20	/* user-mode flag or'ed with type */

@@ -894,6 +894,7 @@ dofault:
 		}
 
 	case T_RES_INST + T_USER:
+	case T_DSP + T_USER:
 		{
 			InstFmt inst;
 			inst = *(InstFmt *)(intptr_t)trapframe->pc;
