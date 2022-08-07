@@ -77,6 +77,7 @@ struct mdthread {
 /* md_flags */
 #define	MDTD_FPUSED	0x0001		/* Process used the FPU */
 #define	MDTD_COP2USED	0x0002		/* Process used the COP2 */
+#define	MDTD_DSPUSED	0x0004		/* Process used the DSP */
 
 struct mdproc {
 	/* Avoid empty structs because they are undefined behavior. */

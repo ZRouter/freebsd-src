@@ -549,6 +549,8 @@
  */
 #define	MIPS_CONFIG3_M		0x80000000	/* Flag: Config4 is present */
 #define	MIPS_CONFIG3_ULR	0x00002000	/* UserLocal reg implemented */
+#define	MIPS_CONFIG3_DSP2P	0x00000800	/* revision 2 of the DSP ASE available */
+#define	MIPS_CONFIG3_DSPP	0x00000400	/* MIPS DSP extension available */
 
 #define MIPS_CONFIG4_MMUSIZEEXT		0x000000FF	/* bits 7.. 0 MMU Size Extension */
 #define MIPS_CONFIG4_MMUEXTDEF		0x0000C000	/* bits 15.14 MMU Extension Definition */

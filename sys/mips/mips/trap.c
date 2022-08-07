@@ -893,8 +893,14 @@ dofault:
 			break;
 		}
 
-	case T_RES_INST + T_USER:
 	case T_DSP + T_USER:
+		{
+			td->td_frame->sr |= MIPS_SR_COP_1_BIT | MIPS_SR_MX;
+			td->td_md.md_flags |= MDTD_DSPUSED;
+			goto out;
+		}
+
+	case T_RES_INST + T_USER:
 		{
 			InstFmt inst;
 			inst = *(InstFmt *)(intptr_t)trapframe->pc;

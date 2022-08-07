@@ -203,6 +203,14 @@ mips_get_identity(struct mips_cpuinfo *cpuinfo)
 		remove_userlocal_code((uint32_t *)cpu_switch);
 	}
 
+	/* Check DSP revision */
+	if (cfg3 & MIPS_CONFIG3_DSP2P)
+		cpuinfo->dsp_rev = 2;
+	else if (cfg3 & MIPS_CONFIG3_DSPP)
+		cpuinfo->dsp_rev = 1;
+	else
+		cpuinfo->dsp_rev = 0;
+
 
 #if defined(CPU_NLM)
 	/* Account for Extended TLB entries in XLP */
