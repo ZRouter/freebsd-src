@@ -1250,7 +1250,7 @@ ufsdirhash_recycle(int wanted)
  * Callback that frees some dirhashes when the system is low on virtual memory.
  */
 static void
-ufsdirhash_lowmem()
+ufsdirhash_lowmem(void)
 {
 	struct dirhash *dh, *dh_temp;
 	int memfreed, memwanted;
@@ -1301,7 +1301,7 @@ ufsdirhash_set_reclaimpercent(SYSCTL_HANDLER_ARGS)
 }
 
 void
-ufsdirhash_init()
+ufsdirhash_init(void)
 {
 	ufs_dirhashmaxmem = lmax(roundup(hibufspace / 64, PAGE_SIZE),
 	    2 * 1024 * 1024);
@@ -1317,7 +1317,7 @@ ufsdirhash_init()
 }
 
 void
-ufsdirhash_uninit()
+ufsdirhash_uninit(void)
 {
 	KASSERT(TAILQ_EMPTY(&ufsdirhash_list), ("ufsdirhash_uninit"));
 	uma_zdestroy(ufsdirhash_zone);

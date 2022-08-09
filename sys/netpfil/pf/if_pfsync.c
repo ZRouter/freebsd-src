@@ -2149,7 +2149,7 @@ pfsync_bulk_update(void *arg)
 {
 	struct pfsync_softc *sc = arg;
 	struct pf_kstate *s;
-	int i, sent = 0;
+	int i;
 
 	PFSYNC_BLOCK_ASSERT(sc);
 	CURVNET_SET(sc->sc_ifp->if_vnet);
@@ -2190,7 +2190,6 @@ pfsync_bulk_update(void *arg)
 					    pfsync_bulk_update, sc);
 					goto full;
 				}
-				sent++;
 			}
 		}
 		PF_HASHROW_UNLOCK(ih);
@@ -2434,7 +2433,7 @@ static struct protosw in_pfsync_protosw = {
 #endif
 
 static void
-pfsync_pointers_init()
+pfsync_pointers_init(void)
 {
 
 	PF_RULES_WLOCK();
@@ -2448,7 +2447,7 @@ pfsync_pointers_init()
 }
 
 static void
-pfsync_pointers_uninit()
+pfsync_pointers_uninit(void)
 {
 
 	PF_RULES_WLOCK();
@@ -2498,7 +2497,7 @@ VNET_SYSUNINIT(vnet_pfsync_uninit, SI_SUB_PROTO_FIREWALL, SI_ORDER_FOURTH,
     vnet_pfsync_uninit, NULL);
 
 static int
-pfsync_init()
+pfsync_init(void)
 {
 #ifdef INET
 	int error;
@@ -2519,7 +2518,7 @@ pfsync_init()
 }
 
 static void
-pfsync_uninit()
+pfsync_uninit(void)
 {
 	pfsync_detach_ifnet_ptr = NULL;
 
