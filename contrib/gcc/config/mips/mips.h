@@ -865,6 +865,7 @@ extern const struct mips_rtx_cost_data *mips_cost;
 %{mips16:%{!mno-mips16:-mips16}} %{mno-mips16:-no-mips16} \
 %{mips3d:-mips3d} \
 %{mdsp} \
+%{mdspr2} \
 %{mfix-vr4120} %{mfix-vr4130} \
 %(subtarget_asm_optimizing_spec) \
 %(subtarget_asm_debugging_spec) \
