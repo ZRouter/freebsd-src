@@ -239,10 +239,13 @@ ar71xx_pcm_intr(void *arg)
 	struct ar71xx_pcm_desc *desc;
 	int reg;
 	int i;
+	int empt, ful;
 
 	scp = arg;
 	sc = scp->sc;
 
+	empt = 0;
+	ful = 0;
 	reg = ATH_READ_REG(AR71XX_MBOX_INT_STATUS);
 	ATH_WRITE_REG(AR71XX_MBOX_INT_STATUS, reg);
 	if (reg & (1 << 10)) {
@@ -254,8 +257,15 @@ ar71xx_pcm_intr(void *arg)
 		for (i = 0; i < PCM_RX_RING_COUNT; ++i) {
 			if (desc->OWN == 0) {
 				desc->OWN = 1;
-				sc->pos = i;
-				break;
+				if (empt == 0)
+					sc->pos = i;
+				else if (ful == 1) {
+					sc->pos = i;
+					ful = 0;
+				}
+				++empt;
+			} else {
+				ful = 1;
 			}
 			++desc;
 		}
@@ -263,7 +273,11 @@ ar71xx_pcm_intr(void *arg)
 		bus_dmamap_sync(sc->desc_tag, sc->desc_map,
 		     BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 		if (ch->run)
-			chn_intr(ch->channel);
+			for (i = 0; i < empt; ++i) {
+				chn_intr(ch->channel);
+				++sc->pos;
+				sc->pos /= PCM_RX_RING_COUNT;
+			}
 	}
 }
 
