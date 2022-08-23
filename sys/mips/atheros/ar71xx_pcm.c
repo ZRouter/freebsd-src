@@ -257,13 +257,10 @@ ar71xx_pcm_intr(void *arg)
 		for (i = 0; i < PCM_RX_RING_COUNT; ++i) {
 			if (desc->OWN == 0) {
 				desc->OWN = 1;
-				if (empt == 0)
+				if (empt == 0 || ful == 1)
 					sc->pos = i;
-				else if (ful == 1) {
-					sc->pos = i;
-					ful = 0;
-				}
 				++empt;
+				ful = 0;
 			} else {
 				ful = 1;
 			}
@@ -276,7 +273,7 @@ ar71xx_pcm_intr(void *arg)
 			for (i = 0; i < empt; ++i) {
 				chn_intr(ch->channel);
 				++sc->pos;
-				sc->pos /= PCM_RX_RING_COUNT;
+				sc->pos %= PCM_RX_RING_COUNT;
 			}
 	}
 }
