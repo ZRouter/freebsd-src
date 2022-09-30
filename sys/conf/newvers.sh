@@ -79,6 +79,12 @@ findvcs()
 	return 1
 }
 
+git_tree_modified()
+{
+	! $git_cmd "--work-tree=${VCSTOP}" -c core.checkStat=minimal -c core.fileMode=off diff --quiet
+}
+
+
 if [ -z "${SYSDIR}" ]; then
     SYSDIR=$(dirname $0)/..
 fi
@@ -184,6 +190,10 @@ if findvcs .git; then
 	done
 fi
 
+if findvcs .gituprevision; then
+	gituprevision="${VCSTOP}/.gituprevision"
+fi
+
 if findvcs .hg; then
 	for dir in /usr/bin /usr/local/bin; do
 		if [ -x "${dir}/hg" ] ; then
@@ -211,20 +221,25 @@ fi
 
 if [ -n "$git_cmd" ] ; then
 	git=$($git_cmd rev-parse --verify --short HEAD 2>/dev/null)
-	git_cnt=$($git_cmd rev-list --first-parent --count HEAD 2>/dev/null)
-	if [ -n "$git_cnt" ] ; then
-		git="n${git_cnt}-${git}"
+	if [ "$($git_cmd rev-parse --is-shallow-repository)" = false ] ; then
+		git_cnt=$($git_cmd rev-list --first-parent --count HEAD 2>/dev/null)
+		if [ -n "$git_cnt" ] ; then
+			git="n${git_cnt}-${git}"
+		fi
 	fi
 	git_b=$($git_cmd rev-parse --abbrev-ref HEAD)
 	if [ -n "$git_b" -a "$git_b" != "HEAD" ] ; then
 		git="${git_b}-${git}"
 	fi
-	if $git_cmd --work-tree=${VCSTOP} diff-index \
-	    --name-only HEAD | read dummy; then
+	if git_tree_modified; then
 		git="${git}-dirty"
 		modified=true
 	fi
 	git=" ${git}"
+fi
+
+if [ -n "$gituprevision" ] ; then
+	gitup=" $(awk -F: '{print $2}' $gituprevision)"
 fi
 
 if [ -n "$p4_cmd" ] ; then
@@ -273,14 +288,14 @@ done
 shift $((OPTIND - 1))
 
 if [ -z "${include_metadata}" ]; then
-	VERINFO="${VERSION}${svn}${git}${hg}${p4version} ${i}"
+	VERINFO="${VERSION}${svn}${git}${gitup}${hg}${p4version} ${i}"
 	VERSTR="${VERINFO}\\n"
 else
-	VERINFO="${VERSION} #${v}${svn}${git}${hg}${p4version}: ${t}"
+	VERINFO="${VERSION} #${v}${svn}${git}${gitup}${hg}${p4version}: ${t}"
 	VERSTR="${VERINFO}\\n    ${u}@${h}:${d}\\n"
 fi
 
-cat << EOF > vers.c
+vers_content_new=$(cat << EOF
 $COPYRIGHT
 #define SCCSSTR "@(#)${VERINFO}"
 #define VERSTR "${VERSTR}"
@@ -294,5 +309,10 @@ char osrelease[sizeof(RELSTR) > 32 ? sizeof(RELSTR) : 32] = RELSTR;
 int osreldate = ${RELDATE};
 char kern_ident[] = "${i}";
 EOF
+)
+vers_content_old=$(cat vers.c 2>/dev/null || true)
+if [ "$vers_content_new" != "$vers_content_old" ]; then
+	echo "$vers_content_new" > vers.c
+fi
 
 echo $((v + 1)) > version

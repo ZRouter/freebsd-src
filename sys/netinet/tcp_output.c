@@ -317,10 +317,10 @@ again:
 			len = ((int32_t)ulmin(cwin,
 			    SEQ_SUB(p->end, p->rxmit)));
 		}
-		off = SEQ_SUB(p->rxmit, tp->snd_una);
-		KASSERT(off >= 0,("%s: sack block to the left of una : %d",
-		    __func__, off));
 		if (len > 0) {
+			off = SEQ_SUB(p->rxmit, tp->snd_una);
+			KASSERT(off >= 0,("%s: sack block to the left of una : %d",
+			    __func__, off));
 			sack_rxmit = 1;
 			sendalot = 1;
 			TCPSTAT_INC(tcps_sack_rexmits);
@@ -394,7 +394,7 @@ after_sack_rexmit:
 		else {
 			int32_t cwin;
 
-                        /*
+			/*
 			 * We are inside of a SACK recovery episode and are
 			 * sending new data, having retransmitted all the
 			 * data possible in the scoreboard.
@@ -410,8 +410,8 @@ after_sack_rexmit:
 			 * of len is bungled by the optimizer.
 			 */
 			if (len > 0) {
-				cwin = tp->snd_cwnd - 
-					(tp->snd_nxt - tp->sack_newdata) -
+				cwin = tp->snd_cwnd - imax(0, (int32_t)
+					(tp->snd_nxt - tp->sack_newdata)) -
 					sack_bytes_rxmt;
 				if (cwin < 0)
 					cwin = 0;
