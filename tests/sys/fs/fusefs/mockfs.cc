@@ -199,6 +199,18 @@ void MockFS::debug_request(const mockfs_buf_in &in, ssize_t buflen)
 		case FUSE_FSYNCDIR:
 			printf(" flags=%#x", in.body.fsyncdir.fsync_flags);
 			break;
+		case FUSE_GETLK:
+			printf(" fh=%#" PRIx64
+				" type=%u pid=%u",
+				in.body.getlk.fh,
+				in.body.getlk.lk.type,
+				in.body.getlk.lk.pid);
+			if (verbosity >= 2) {
+				printf(" range=[%" PRIi64 ":%" PRIi64 "]",
+					in.body.getlk.lk.start,
+					in.body.getlk.lk.end);
+			}
+			break;
 		case FUSE_INTERRUPT:
 			printf(" unique=%" PRIu64, in.body.interrupt.unique);
 			break;
@@ -252,6 +264,15 @@ void MockFS::debug_request(const mockfs_buf_in &in, ssize_t buflen)
 				in.body.release.flags,
 				in.body.release.lock_owner);
 			break;
+		case FUSE_RENAME:
+			{
+				const char *src = (const char*)in.body.bytes +
+					sizeof(fuse_rename_in);
+				const char *dst = src + strlen(src) + 1;
+				printf(" src=%s newdir=%" PRIu64 " dst=%s",
+					src, in.body.rename.newdir, dst);
+			}
+			break;
 		case FUSE_SETATTR:
 			if (verbosity <= 1) {
 				printf(" valid=%#x", in.body.setattr.valid);
@@ -283,7 +304,7 @@ void MockFS::debug_request(const mockfs_buf_in &in, ssize_t buflen)
 				in.body.setlk.lk.type,
 				in.body.setlk.lk.pid);
 			if (verbosity >= 2) {
-				printf(" range=[%" PRIu64 "-%" PRIu64 "]",
+				printf(" range=[%" PRIi64 ":%" PRIi64 "]",
 					in.body.setlk.lk.start,
 					in.body.setlk.lk.end);
 			}
@@ -354,7 +375,7 @@ void MockFS::debug_response(const mockfs_buf_out &out) {
 MockFS::MockFS(int max_readahead, bool allow_other, bool default_permissions,
 	bool push_symlinks_in, bool ro, enum poll_method pm, uint32_t flags,
 	uint32_t kernel_minor_version, uint32_t max_write, bool async,
-	bool noclusterr, unsigned time_gran, bool nointr)
+	bool noclusterr, unsigned time_gran, bool nointr, bool noatime)
 {
 	struct sigaction sa;
 	struct iovec *iov = NULL;
@@ -429,6 +450,10 @@ MockFS::MockFS(int max_readahead, bool allow_other, bool default_permissions,
 	if (async) {
 		build_iovec(&iov, &iovlen, "async", __DECONST(void*, &trueval),
 			sizeof(bool));
+	}
+	if (noatime) {
+		build_iovec(&iov, &iovlen, "noatime",
+			__DECONST(void*, &trueval), sizeof(bool));
 	}
 	if (noclusterr) {
 		build_iovec(&iov, &iovlen, "noclusterr",

@@ -49,7 +49,7 @@
  *********************************************************************/
 #define IXL_DRIVER_VERSION_MAJOR	2
 #define IXL_DRIVER_VERSION_MINOR	3
-#define IXL_DRIVER_VERSION_BUILD	1
+#define IXL_DRIVER_VERSION_BUILD	2
 
 #define IXL_DRIVER_VERSION_STRING			\
     __XSTRING(IXL_DRIVER_VERSION_MAJOR) "."		\
@@ -86,6 +86,7 @@ static pci_vendor_info_t ixl_vendor_info_array[] =
 	PVIDV(I40E_INTEL_VENDOR_ID, I40E_DEV_ID_10G_SFP, "Intel(R) Ethernet Controller X710 for 10GbE SFP+"),
 	PVIDV(I40E_INTEL_VENDOR_ID, I40E_DEV_ID_10G_B, "Intel(R) Ethernet Controller X710 for 10GbE backplane"),
 	PVIDV(I40E_INTEL_VENDOR_ID, I40E_DEV_ID_5G_BASE_T_BC, "Intel(R) Ethernet Controller V710 for 5GBASE-T"),
+	PVIDV(I40E_INTEL_VENDOR_ID, I40E_DEV_ID_1G_BASE_T_BC, "Intel(R) Ethernet Controller I710 for 1GBASE-T"),
 	/* required last entry */
 	PVID_END
 };
@@ -127,7 +128,6 @@ static void	 ixl_if_vflr_handle(if_ctx_t ctx);
 #endif
 
 /*** Other ***/
-static int	 ixl_mc_filter_apply(void *arg, struct ifmultiaddr *ifma, int);
 static void	 ixl_save_pf_tunables(struct ixl_pf *);
 static int	 ixl_allocate_pci_resources(struct ixl_pf *);
 static void	 ixl_setup_ssctx(struct ixl_pf *pf);
@@ -870,7 +870,7 @@ ixl_if_detach(if_ctx_t ctx)
 
 	ixl_pf_qmgr_destroy(&pf->qmgr);
 	ixl_free_pci_resources(pf);
-	ixl_free_mac_filters(vsi);
+	ixl_free_filters(&vsi->ftl);
 	INIT_DBG_DEV(dev, "end");
 	return (0);
 }
@@ -945,9 +945,9 @@ ixl_if_init(if_ctx_t ctx)
 
 	/* Get the latest mac address... User might use a LAA */
 	bcopy(IF_LLADDR(vsi->ifp), tmpaddr, ETH_ALEN);
-	if (!cmp_etheraddr(hw->mac.addr, tmpaddr) &&
+	if (!ixl_ether_is_equal(hw->mac.addr, tmpaddr) &&
 	    (i40e_validate_mac_addr(tmpaddr) == I40E_SUCCESS)) {
-		ixl_del_filter(vsi, hw->mac.addr, IXL_VLAN_ANY);
+		ixl_del_all_vlan_filters(vsi, hw->mac.addr);
 		bcopy(tmpaddr, hw->mac.addr, ETH_ALEN);
 		ret = i40e_aq_mac_address_write(hw,
 		    I40E_AQC_WRITE_TYPE_LAA_ONLY,
@@ -956,7 +956,10 @@ ixl_if_init(if_ctx_t ctx)
 			device_printf(dev, "LLA address change failed!!\n");
 			return;
 		}
-		ixl_add_filter(vsi, hw->mac.addr, IXL_VLAN_ANY);
+		/*
+		 * New filters are configured by ixl_reconfigure_filters
+		 * at the end of ixl_init_locked.
+		 */
 	}
 
 	iflib_set_mac(ctx, hw->mac.addr);
@@ -1405,7 +1408,7 @@ ixl_if_update_admin_status(if_ctx_t ctx)
 	struct i40e_hw	*hw = &pf->hw;
 	u16		pending;
 
-	if (pf->state & IXL_PF_STATE_ADAPTER_RESETTING)
+	if (IXL_PF_IS_RESETTING(pf))
 		ixl_handle_empr_reset(pf);
 
 	/*
@@ -1438,33 +1441,22 @@ ixl_if_multi_set(if_ctx_t ctx)
 	struct ixl_pf *pf = iflib_get_softc(ctx);
 	struct ixl_vsi *vsi = &pf->vsi;
 	struct i40e_hw *hw = vsi->hw;
-	int mcnt = 0, flags;
-	int del_mcnt;
+	int mcnt;
 
 	IOCTL_DEBUGOUT("ixl_if_multi_set: begin");
 
-	mcnt = if_multiaddr_count(iflib_get_ifp(ctx), MAX_MULTICAST_ADDR);
 	/* Delete filters for removed multicast addresses */
-	del_mcnt = ixl_del_multi(vsi);
-	vsi->num_macs -= del_mcnt;
+	ixl_del_multi(vsi, false);
 
+	mcnt = if_multiaddr_count(iflib_get_ifp(ctx), MAX_MULTICAST_ADDR);
 	if (__predict_false(mcnt == MAX_MULTICAST_ADDR)) {
 		i40e_aq_set_vsi_multicast_promiscuous(hw,
 		    vsi->seid, TRUE, NULL);
+		ixl_del_multi(vsi, true);
 		return;
 	}
-	/* (re-)install filters for all mcast addresses */
-	/* XXX: This bypasses filter count tracking code! */
-	mcnt = if_multi_apply(iflib_get_ifp(ctx), ixl_mc_filter_apply, vsi);
-	
-	if (mcnt > 0) {
-		vsi->num_macs += mcnt;
-		flags = (IXL_FILTER_ADD | IXL_FILTER_USED | IXL_FILTER_MC);
-		ixl_add_hw_filters(vsi, flags, mcnt);
-	}
 
-	ixl_dbg_filter(pf, "%s: filter mac total: %d\n",
-	    __func__, vsi->num_macs);
+	ixl_add_multi(vsi);
 	IOCTL_DEBUGOUT("ixl_if_multi_set: end");
 }
 
@@ -1682,12 +1674,35 @@ ixl_if_vlan_register(if_ctx_t ctx, u16 vtag)
 	struct ixl_pf *pf = iflib_get_softc(ctx);
 	struct ixl_vsi *vsi = &pf->vsi;
 	struct i40e_hw	*hw = vsi->hw;
+	if_t ifp = iflib_get_ifp(ctx);
 
 	if ((vtag == 0) || (vtag > 4095))	/* Invalid */
 		return;
 
+	/*
+	 * Keep track of registered VLANS to know what
+	 * filters have to be configured when VLAN_HWFILTER
+	 * capability is enabled.
+	 */
 	++vsi->num_vlans;
-	ixl_add_filter(vsi, hw->mac.addr, vtag);
+	bit_set(vsi->vlans_map, vtag);
+
+	if ((if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER) == 0)
+		return;
+
+	if (vsi->num_vlans < IXL_MAX_VLAN_FILTERS)
+		ixl_add_filter(vsi, hw->mac.addr, vtag);
+	else if (vsi->num_vlans == IXL_MAX_VLAN_FILTERS) {
+		/*
+		 * There is not enough HW resources to add filters
+		 * for all registered VLANs. Re-configure filtering
+		 * to allow reception of all expected traffic.
+		 */
+		device_printf(vsi->dev,
+		    "Not enough HW filters for all VLANs. VLAN HW filtering disabled");
+		ixl_del_all_vlan_filters(vsi, hw->mac.addr);
+		ixl_add_filter(vsi, hw->mac.addr, IXL_VLAN_ANY);
+	}
 }
 
 static void
@@ -1696,12 +1711,23 @@ ixl_if_vlan_unregister(if_ctx_t ctx, u16 vtag)
 	struct ixl_pf *pf = iflib_get_softc(ctx);
 	struct ixl_vsi *vsi = &pf->vsi;
 	struct i40e_hw	*hw = vsi->hw;
+	if_t ifp = iflib_get_ifp(ctx);
 
 	if ((vtag == 0) || (vtag > 4095))	/* Invalid */
 		return;
 
 	--vsi->num_vlans;
-	ixl_del_filter(vsi, hw->mac.addr, vtag);
+	bit_clear(vsi->vlans_map, vtag);
+
+	if ((if_getcapenable(ifp) & IFCAP_VLAN_HWFILTER) == 0)
+		return;
+
+	if (vsi->num_vlans < IXL_MAX_VLAN_FILTERS)
+		ixl_del_filter(vsi, hw->mac.addr, vtag);
+	else if (vsi->num_vlans == IXL_MAX_VLAN_FILTERS) {
+		ixl_del_filter(vsi, hw->mac.addr, IXL_VLAN_ANY);
+		ixl_add_vlan_filters(vsi, hw->mac.addr);
+	}
 }
 
 static uint64_t
@@ -1817,18 +1843,6 @@ ixl_if_needs_restart(if_ctx_t ctx __unused, enum iflib_restart_event event)
 	default:
 		return (false);
 	}
-}
-
-static int
-ixl_mc_filter_apply(void *arg, struct ifmultiaddr *ifma, int count __unused)
-{
-	struct ixl_vsi *vsi = arg;
-
-	if (ifma->ifma_addr->sa_family != AF_LINK)
-		return (0);
-	ixl_add_mc_filter(vsi, 
-	    (u8*)LLADDR((struct sockaddr_dl *) ifma->ifma_addr));
-	return (1);
 }
 
 /*

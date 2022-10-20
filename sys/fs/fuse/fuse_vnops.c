@@ -385,7 +385,9 @@ fuse_vnop_advlock(struct vop_advlock_args *ap)
 	struct fuse_dispatcher fdi;
 	struct fuse_lk_in *fli;
 	struct fuse_lk_out *flo;
+	struct vattr vattr;
 	enum fuse_opcode op;
+	off_t size, start;
 	int dataflags, err;
 	int flags = ap->a_flags;
 
@@ -394,18 +396,6 @@ fuse_vnop_advlock(struct vop_advlock_args *ap)
 	if (fuse_isdeadfs(vp)) {
 		return ENXIO;
 	}
-
-	if (!(dataflags & FSESS_POSIX_LOCKS))
-		return vop_stdadvlock(ap);
-	/* FUSE doesn't properly support flock until protocol 7.17 */
-	if (flags & F_FLOCK)
-		return vop_stdadvlock(ap);
-
-	err = fuse_filehandle_get_anyflags(vp, &fufh, cred, pid);
-	if (err)
-		return err;
-
-	fdisp_init(&fdi, sizeof(*fli));
 
 	switch(ap->a_op) {
 	case F_GETLK:
@@ -424,13 +414,54 @@ fuse_vnop_advlock(struct vop_advlock_args *ap)
 		return EINVAL;
 	}
 
+	if (!(dataflags & FSESS_POSIX_LOCKS))
+		return vop_stdadvlock(ap);
+	/* FUSE doesn't properly support flock until protocol 7.17 */
+	if (flags & F_FLOCK)
+		return vop_stdadvlock(ap);
+
+	vn_lock(vp, LK_SHARED | LK_RETRY);
+
+	switch (fl->l_whence) {
+	case SEEK_SET:
+	case SEEK_CUR:
+		/*
+		 * Caller is responsible for adding any necessary offset
+		 * when SEEK_CUR is used.
+		 */
+		start = fl->l_start;
+		break;
+
+	case SEEK_END:
+		err = fuse_internal_getattr(vp, &vattr, cred, td);
+		if (err)
+			goto out;
+		size = vattr.va_size;
+		if (size > OFF_MAX ||
+		    (fl->l_start > 0 && size > OFF_MAX - fl->l_start)) {
+			err = EOVERFLOW;
+			goto out;
+		}
+		start = size + fl->l_start;
+		break;
+
+	default:
+		return (EINVAL);
+	}
+
+	err = fuse_filehandle_get_anyflags(vp, &fufh, cred, pid);
+	if (err)
+		goto out;
+
+	fdisp_init(&fdi, sizeof(*fli));
+
 	fdisp_make_vp(&fdi, op, vp, td, cred);
 	fli = fdi.indata;
 	fli->fh = fufh->fh_id;
 	fli->owner = td->td_proc->p_pid;
-	fli->lk.start = fl->l_start;
+	fli->lk.start = start;
 	if (fl->l_len != 0)
-		fli->lk.end = fl->l_start + fl->l_len - 1;
+		fli->lk.end = start + fl->l_len - 1;
 	else
 		fli->lk.end = INT64_MAX;
 	fli->lk.type = fl->l_type;
@@ -442,8 +473,9 @@ fuse_vnop_advlock(struct vop_advlock_args *ap)
 	if (err == 0 && op == FUSE_GETLK) {
 		flo = fdi.answ;
 		fl->l_type = flo->lk.type;
-		fl->l_pid = flo->lk.pid;
+		fl->l_whence = SEEK_SET;
 		if (flo->lk.type != F_UNLCK) {
+			fl->l_pid = flo->lk.pid;
 			fl->l_start = flo->lk.start;
 			if (flo->lk.end == INT64_MAX)
 				fl->l_len = 0;
@@ -453,6 +485,8 @@ fuse_vnop_advlock(struct vop_advlock_args *ap)
 		}
 	}
 
+out:
+	VOP_UNLOCK(vp, 0);
 	return err;
 }
 
@@ -572,6 +606,7 @@ fuse_vnop_close(struct vop_close_args *ap)
 	int fflag = ap->a_fflag;
 	struct thread *td = ap->a_td;
 	pid_t pid = td->td_proc->p_pid;
+	struct fuse_vnode_data *fvdat = VTOFUD(vp);
 	int err = 0;
 
 	if (fuse_isdeadfs(vp))
@@ -582,8 +617,15 @@ fuse_vnop_close(struct vop_close_args *ap)
 		return 0;
 
 	err = fuse_flush(vp, cred, pid, fflag);
+	if (err == 0 && (fvdat->flag & FN_ATIMECHANGE)) {
+		struct vattr vap;
+
+		VATTR_NULL(&vap);
+		vap.va_atime = fvdat->cached_attrs.va_atime;
+		err = fuse_internal_setattr(vp, &vap, td, NULL);
+	}
 	/* TODO: close the file handle, if we're sure it's no longer used */
-	if ((VTOFUD(vp)->flag & FN_SIZECHANGE) != 0) {
+	if ((fvdat->flag & FN_SIZECHANGE) != 0) {
 		fuse_vnode_savesize(vp, cred, td->td_proc->p_pid);
 	}
 	return err;
