@@ -35,6 +35,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <malloc_np.h>
 #include <signal.h>
 #include <strings.h>
 #include <string.h>
@@ -405,10 +406,8 @@ readmail(struct queue *queue, int nodot, int recp_from_header)
 	if ((ssize_t)error < 0)
 		return (-1);
 
-	while (!feof(stdin)) {
+	while ((linelen = getline(&line, &linecap, stdin)) > 0) {
 		newline[0] = '\0';
-		if ((linelen = getline(&line, &linecap, stdin)) <= 0)
-			break;
 		if (had_last_line)
 			errlogx(EX_DATAERR, "bad mail input format:"
 				" from %s (uid %d) (envelope-from %s)",
@@ -420,8 +419,14 @@ readmail(struct queue *queue, int nodot, int recp_from_header)
 			 * If we fix it, it better be the last line of
 			 * the file.
 			 */
-			line[linelen] = '\n';
-			line[linelen + 1] = 0;
+			if ((size_t)linelen + 1 > linecap) {
+				line = realloc(line, linelen + 2);
+				if (line == NULL)
+					errlogx(EX_SOFTWARE, "realloc");
+				linecap = malloc_usable_size(line);
+			}
+			line[linelen++] = '\n';
+			line[linelen] = 0;
 			had_last_line = 1;
 		}
 		if (!had_first_line) {
@@ -510,8 +515,8 @@ readmail(struct queue *queue, int nodot, int recp_from_header)
 			}
 		}
 	}
-
-	ret = 0;
+	if (ferror(stdin) == 0)
+		ret = 0;
 fail:
 	free(line);
 	return (ret);

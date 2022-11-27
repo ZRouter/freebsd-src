@@ -87,8 +87,8 @@ __FBSDID("$FreeBSD$");
 #define	VIRTIO_SCSI_F_CHANGE	(1 << 2)
 
 static int pci_vtscsi_debug = 0;
-#define	DPRINTF(params) if (pci_vtscsi_debug) PRINTLN params
-#define	WPRINTF(params) PRINTLN params
+#define	WPRINTF(msg, params...) PRINTLN("virtio-scsi: " msg, ##params)
+#define	DPRINTF(msg, params...) if (pci_vtscsi_debug) WPRINTF(msg, ##params)
 
 struct pci_vtscsi_config {
 	uint32_t num_queues;
@@ -288,8 +288,7 @@ pci_vtscsi_proc(void *arg)
 		vq_endchains(q->vsq_vq, 0);
 		pthread_mutex_unlock(&q->vsq_qmtx);
 
-		DPRINTF(("virtio-scsi: request <idx=%d> completed",
-		    req->vsr_idx));
+		DPRINTF("request <idx=%d> completed", req->vsr_idx);
 		free(req);
 	}
 
@@ -304,7 +303,7 @@ pci_vtscsi_reset(void *vsc)
 
 	sc = vsc;
 
-	DPRINTF(("vtscsi: device reset requested"));
+	DPRINTF("device reset requested");
 	vi_reset_dev(&sc->vss_vs);
 
 	/* initialize config structure */
@@ -364,14 +363,27 @@ pci_vtscsi_control_handle(struct pci_vtscsi_softc *sc, void *buf,
 	struct pci_vtscsi_ctrl_an *an;
 	uint32_t type;
 
+	if (bufsize < sizeof(uint32_t)) {
+		WPRINTF("ignoring truncated control request");
+		return (0);
+	}
+
 	type = *(uint32_t *)buf;
 
 	if (type == VIRTIO_SCSI_T_TMF) {
+		if (bufsize != sizeof(*tmf)) {
+			WPRINTF("ignoring tmf request with size %zu", bufsize);
+			return (0);
+		}
 		tmf = (struct pci_vtscsi_ctrl_tmf *)buf;
 		return (pci_vtscsi_tmf_handle(sc, tmf));
 	}
 
 	if (type == VIRTIO_SCSI_T_AN_QUERY) {
+		if (bufsize != sizeof(*an)) {
+			WPRINTF("ignoring AN request with size %zu", bufsize);
+			return (0);
+		}
 		an = (struct pci_vtscsi_ctrl_an *)buf;
 		return (pci_vtscsi_an_handle(sc, an));
 	}
@@ -433,13 +445,13 @@ pci_vtscsi_tmf_handle(struct pci_vtscsi_softc *sc,
 		struct sbuf *sb = sbuf_new_auto();
 		ctl_io_sbuf(io, sb);
 		sbuf_finish(sb);
-		DPRINTF(("pci_virtio_scsi: %s", sbuf_data(sb)));
+		DPRINTF("%s", sbuf_data(sb));
 		sbuf_delete(sb);
 	}
 
 	err = ioctl(sc->vss_ctl_fd, CTL_IO, io);
 	if (err != 0)
-		WPRINTF(("CTL_IO: err=%d (%s)", errno, strerror(errno)));
+		WPRINTF("CTL_IO: err=%d (%s)", errno, strerror(errno));
 
 	tmf->response = io->taskio.task_status;
 	ctl_scsi_free_io(io);
@@ -468,6 +480,15 @@ pci_vtscsi_request_handle(struct pci_vtscsi_queue *q, struct iovec *iov_in,
 	uint32_t ext_data_len = 0, ext_sg_entries = 0;
 	int err;
 
+	if (count_iov(iov_out, niov_out) < VTSCSI_OUT_HEADER_LEN(sc)) {
+		WPRINTF("ignoring request with insufficient output");
+		return (0);
+	}
+	if (count_iov(iov_in, niov_in) < VTSCSI_IN_HEADER_LEN(sc)) {
+		WPRINTF("ignoring request with incomplete header");
+		return (0);
+	}
+
 	seek_iov(iov_in, niov_in, data_iov_in, &data_niov_in,
 	    VTSCSI_IN_HEADER_LEN(sc));
 	seek_iov(iov_out, niov_out, data_iov_out, &data_niov_out,
@@ -477,7 +498,7 @@ pci_vtscsi_request_handle(struct pci_vtscsi_queue *q, struct iovec *iov_in,
 	truncate_iov(iov_out, &niov_out, VTSCSI_OUT_HEADER_LEN(sc));
 	iov_to_buf(iov_in, niov_in, (void **)&cmd_rd);
 
-	cmd_wr = malloc(VTSCSI_OUT_HEADER_LEN(sc));
+	cmd_wr = calloc(1, VTSCSI_OUT_HEADER_LEN(sc));
 	io = ctl_scsi_alloc_io(sc->vss_iid);
 	ctl_scsi_zero_io(io);
 
@@ -526,13 +547,13 @@ pci_vtscsi_request_handle(struct pci_vtscsi_queue *q, struct iovec *iov_in,
 		struct sbuf *sb = sbuf_new_auto();
 		ctl_io_sbuf(io, sb);
 		sbuf_finish(sb);
-		DPRINTF(("pci_virtio_scsi: %s", sbuf_data(sb)));
+		DPRINTF("%s", sbuf_data(sb));
 		sbuf_delete(sb);
 	}
 
 	err = ioctl(sc->vss_ctl_fd, CTL_IO, io);
 	if (err != 0) {
-		WPRINTF(("CTL_IO: err=%d (%s)", errno, strerror(errno)));
+		WPRINTF("CTL_IO: err=%d (%s)", errno, strerror(errno));
 		cmd_wr->response = VIRTIO_SCSI_S_FAILURE;
 	} else {
 		cmd_wr->sense_len = MIN(io->scsiio.sense_len,
@@ -629,7 +650,7 @@ pci_vtscsi_requestq_notify(void *vsc, struct vqueue_info *vq)
 		pthread_cond_signal(&q->vsq_cv);
 		pthread_mutex_unlock(&q->vsq_mtx);
 
-		DPRINTF(("virtio-scsi: request <idx=%d> enqueued", idx));
+		DPRINTF("request <idx=%d> enqueued", idx);
 	}
 }
 
@@ -694,7 +715,7 @@ pci_vtscsi_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 
 	sc->vss_ctl_fd = open(devname, O_RDWR);
 	if (sc->vss_ctl_fd < 0) {
-		WPRINTF(("cannot open %s: %s", devname, strerror(errno)));
+		WPRINTF("cannot open %s: %s", devname, strerror(errno));
 		free(sc);
 		return (1);
 	}
