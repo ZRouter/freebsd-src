@@ -163,6 +163,9 @@ LEAF(savectx)
 	SAVE_U_PCB_CONTEXT(v0, PCB_REG_SR, a0)
 	SAVE_U_PCB_CONTEXT(gp, PCB_REG_GP, a0)
 
+#ifdef MIPS_DSP_SUPPORT
+	/* save dsp registor to pcb */
+#endif
 	move	v0, ra			/* save 'ra' before we trash it */
 	jal	1f
 	nop

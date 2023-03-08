@@ -125,6 +125,9 @@ sendsig(sig_t catcher, ksiginfo_t *ksi, sigset_t *mask)
 		    (void *)sf.sf_uc.uc_mcontext.mc_fpregs,
 		    sizeof(sf.sf_uc.uc_mcontext.mc_fpregs));
 	}
+#ifdef MIPS_DSP_SUPPORT
+	/* ??? */
+#endif
 
 	/* Allocate and validate space for the signal handler context. */
 	if ((td->td_pflags & TDP_ALTSTACK) != 0 && !oonstack &&

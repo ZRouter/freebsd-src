@@ -894,12 +894,22 @@ dofault:
 		}
 
 	case T_DSP + T_USER:
+#ifdef MIPS_DSP_SUPPORT
 		{
 			td->td_frame->sr |= MIPS_SR_COP_1_BIT | MIPS_SR_MX;
-			td->td_md.md_flags |= MDTD_DSPUSED;
+
+			if ((td->td_md.md_flags & MDTD_DSPUSED) == 0) {
+				/* first time use dsp instracution */
+
+				/* clear dsp pcb */
+
+				td->td_md.md_flags |= MDTD_DSPUSED;
+			}
+			/* register restore from pcb */
+
 			goto out;
 		}
-
+#endif
 	case T_RES_INST + T_USER:
 		{
 			InstFmt inst;

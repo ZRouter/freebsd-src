@@ -137,6 +137,15 @@ struct trapframe {
 	f_register_t	f31;
 	register_t	fsr;
         register_t	fir;
+#ifdef MIPS_DSP_SUPPORT
+        register_t	mullo1;
+        register_t	mulhi1;
+        register_t	mullo2;
+        register_t	mulhi2;
+        register_t	mullo3;
+        register_t	mulhi3;
+        register_t	dspctl;
+#endif
 };
 
 #endif	/* !_MACHINE_FRAME_H_ */
