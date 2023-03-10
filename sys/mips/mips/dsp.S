@@ -107,20 +107,20 @@ LEAF(dsp_save)
 	or	t0, t1, MIPS_SR_COP_1_BIT | MIPS_SR_MX	#  enable dsp
 	mtc0	t0, MIPS_COP_0_STATUS
 	ehb
-	mflo	a1, $ac1
-	sw	a1, U_PCB_DSPREGS + (SZFPREG * 0)(a0)
-	mfhi	a1, $ac1
-	sw	a1, U_PCB_DSPREGS + (SZFPREG * 1)(a0)
-	mflo	a1, $ac2
-	sw	a1, U_PCB_DSPREGS + (SZFPREG * 2)(a0)
-	mfhi	a1, $ac2
-	sw	a1, U_PCB_DSPREGS + (SZFPREG * 3)(a0)
-	mflo	a1, $ac3
-	sw	a1, U_PCB_DSPREGS + (SZFPREG * 4)(a0)
-	mfhi	a1, $ac3
-	sw	a1, U_PCB_DSPREGS + (SZFPREG * 5)(a0)
-	rddsp	a1
-	sw	a1, U_PCB_DSPREGS + (SZFPREG * 6)(a0)
+	mflo	t2, $ac1
+	sw	t2, U_PCB_DSPREGS + (SZFPREG * 0)(a0)
+	mfhi	t2, $ac1
+	sw	t2, U_PCB_DSPREGS + (SZFPREG * 1)(a0)
+	mflo	t2, $ac2
+	sw	t2, U_PCB_DSPREGS + (SZFPREG * 2)(a0)
+	mfhi	t2, $ac2
+	sw	t2, U_PCB_DSPREGS + (SZFPREG * 3)(a0)
+	mflo	t2, $ac3
+	sw	t2, U_PCB_DSPREGS + (SZFPREG * 4)(a0)
+	mfhi	t2, $ac3
+	sw	t2, U_PCB_DSPREGS + (SZFPREG * 5)(a0)
+	rddsp	t2
+	sw	t2, U_PCB_DSPREGS + (SZFPREG * 6)(a0)
 
 	mtc0	t1, MIPS_COP_0_STATUS		# Restore the status register.
 	ehb

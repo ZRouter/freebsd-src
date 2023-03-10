@@ -165,8 +165,8 @@ LEAF(savectx)
 
 #ifdef MIPS_DSP_SUPPORT
 	/* save dsp registor to pcb */
-//	jal	dsp_save
-//	nop
+	jal	dsp_save
+	nop
 #endif
 	move	v0, ra			/* save 'ra' before we trash it */
 	jal	1f
@@ -225,6 +225,11 @@ NESTED(cpu_switch, CALLFRAME_SIZ, ra)
 	SAVE_U_PCB_CONTEXT(ra, PCB_REG_RA, a0)		# save return address
 	SAVE_U_PCB_CONTEXT(t0, PCB_REG_SR, a0)		# save status register
 	SAVE_U_PCB_CONTEXT(gp, PCB_REG_GP, a0)
+#ifdef MIPS_DSP_SUPPORT
+	/* save dsp registor to pcb */
+	jal	dsp_save
+	nop
+#endif
 	jal	getpc
 	nop
 getpc:
