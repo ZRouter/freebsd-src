@@ -906,6 +906,7 @@ dofault:
 				td->td_md.md_flags |= MDTD_DSPUSED;
 			}
 			/* register restore from pcb */
+			dsp_restore(td->td_frame);
 
 			goto out;
 		}

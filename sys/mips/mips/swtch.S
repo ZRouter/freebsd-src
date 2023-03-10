@@ -165,6 +165,8 @@ LEAF(savectx)
 
 #ifdef MIPS_DSP_SUPPORT
 	/* save dsp registor to pcb */
+//	jal	dsp_save
+//	nop
 #endif
 	move	v0, ra			/* save 'ra' before we trash it */
 	jal	1f

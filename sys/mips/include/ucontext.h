@@ -55,11 +55,12 @@ typedef struct	__mcontext {
 	int		mc_fpused;	/* fp has been used */
 	f_register_t	mc_fpregs[33];	/* fp regs 0 to 31 and csr */
 	__register_t	mc_fpc_eir;	/* fp exception instruction reg */
-#ifdef MIPS_DSP_SUPPORT
-	/* ??? */
-#endif
 	void		*mc_tls;	/* pointer to TLS area */
+#ifdef MIPS_DSP_SUPPORT
+	__register_t	mc_dspregs[8];	/* dsp registers... */
+#else
 	int		__spare__[8];	/* XXX reserved */ 
+#endif
 } mcontext_t;
 
 #if (defined(__mips_n32) || defined(__mips_n64)) && defined(COMPAT_FREEBSD32)
@@ -74,8 +75,6 @@ typedef struct __mcontext32 {
 	int		mc_fpused;
 	int32_t		mc_fpregs[33];
 	int32_t		mc_fpc_eir;
-#ifdef MIPS_DSP_SUPPORT
-#endif
 	int32_t		mc_tls;
 	int		__spare__[8];
 } mcontext32_t;
