@@ -40,6 +40,7 @@ mips/mips/stdatomic.c			standard \
 mips/mips/support.S			standard
 mips/mips/bcopy.S			standard
 mips/mips/swtch.S			standard
+mips/mips/dsp.S				standard
 mips/mips/sys_machdep.c			standard
 mips/mips/tlb.c				standard
 mips/mips/trap.c			standard
