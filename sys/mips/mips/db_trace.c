@@ -37,13 +37,26 @@ __FBSDID("$FreeBSD$");
 #include <sys/proc.h>
 #include <sys/stack.h>
 #include <sys/sysent.h>
+#include <sys/pcpu.h>
+#include <sys/vnode.h>
+#include <sys/lock.h>
+#include <sys/rwlock.h>
 
 #include <machine/asm.h>
+#include <machine/regnum.h>
 #include <machine/db_machdep.h>
 #include <machine/md_var.h>
 #include <machine/mips_opcode.h>
 #include <machine/pcb.h>
 #include <machine/trap.h>
+
+#include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/vm_extern.h>
+#include <vm/vm_kern.h>
+#include <vm/vm_page.h>
+#include <vm/vm_map.h>
+#include <vm/vm_object.h>
 
 #include <ddb/ddb.h>
 #include <ddb/db_sym.h>
@@ -66,6 +79,7 @@ extern char edata[];
 #define	MIPS_START_OF_FUNCTION(ins)	((((ins) & 0xffff8000) == 0x27bd8000) \
 	|| (((ins) & 0xffff8000) == 0x67bd8000))
 
+#define	MIPS_START_OF_UL_FUNCTION(ins)	((ins) == 0x0399e021)
 /*
  * MIPS ABI 3.0 requires that all functions return using the 'j ra' instruction
  *
@@ -117,12 +131,75 @@ loop:
 		return;
 	}
 
+
+//	/* Check for bad PC. */
+//	if (!MIPS_IS_VALID_KERNELADDR(pc)) {
+//		db_printf("PC 0x%jx: not in kernel\n", (uintmax_t)pc);
+//		ra = 0;
+//		goto done;
+//	}
+
 	/* Check for bad SP: could foul up next frame. */
 	if (!MIPS_IS_VALID_KERNELADDR(sp)) {
-		db_printf("SP 0x%jx: not in kernel\n", (uintmax_t)sp);
-		ra = 0;
-		subr = 0;
-		goto done;
+		struct proc *p;
+		struct vm_map *vm;
+		vm_map_entry_t entry;
+		vm_object_t mem;
+		vm_pindex_t pindex;
+		vm_prot_t prot;
+		struct vnode *vn;
+		boolean_t wired;
+		char *atpath, *freepath;
+		int err;
+
+		//db_printf("SP 0x%jx: not in kernel\n", (uintmax_t)sp);
+		p = curproc;
+		vm = &p->p_vmspace->vm_map;
+		err = vm_map_lookup(&vm, (vm_offset_t)pc, VM_PROT_EXECUTE,
+				&entry,
+				&mem,
+				&pindex,
+				&prot,
+				&wired);
+		if (err != KERN_SUCCESS) {
+			db_printf("can't lookup vm_map_entry: %d\n", err);
+			ra = 0;
+			subr = 0;
+			goto done;
+		}
+
+		vm_map_lookup_done(vm, entry);
+		VM_OBJECT_RLOCK(mem);
+		vn = vm_object_vnode(mem);
+
+		if (vn == NULL) {
+			VM_OBJECT_RUNLOCK(mem);
+			db_printf("can't lookup vnode for %p\n", mem);
+			ra = 0;
+			subr = 0;
+			goto done;
+		}
+		VM_OBJECT_RUNLOCK(mem);
+
+		err = vn_fullpath(FIRST_THREAD_IN_PROC(p), vn, &atpath, &freepath);
+
+		if (err) {
+			db_printf("can't get fullpath: %d, %p\n", err, vn);
+			ra = 0;
+			subr = 0;
+			goto done;
+		}
+
+		db_printf("[%s]\t(%jx %x %x) 0x%x\t", atpath, entry->offset, entry->start, entry->end, ((vm_offset_t)pc) - entry->start);
+		free(freepath, M_TEMP);
+
+//		if(ra) {
+//			/* Mm... what's about stack size */
+//			goto done;
+//		}
+	} else {
+		/* TODO: add support of modules */
+		db_printf("[%s]\t", "kernel");
 	}
 #define Between(x, y, z) \
 		( ((x) <= (y)) && ((y) < (z)) )
@@ -137,9 +214,10 @@ loop:
 	if (pcBetween(MipsKernGenException, MipsUserGenException)) {
 		subr = (uintptr_t)MipsKernGenException;
 		trapframe = true;
-	} else if (pcBetween(MipsUserGenException, MipsKernIntr))
+	} else if (pcBetween(MipsUserGenException, MipsKernIntr)) {
 		subr = (uintptr_t)MipsUserGenException;
-	else if (pcBetween(MipsKernIntr, MipsUserIntr)) {
+		trapframe = true;
+	} else if (pcBetween(MipsKernIntr, MipsUserIntr)) {
 		subr = (uintptr_t)MipsKernIntr;
 		trapframe = true;
 	} else if (pcBetween(MipsUserIntr, MipsTLBInvalidException))
@@ -158,13 +236,6 @@ loop:
 		subr = (uintptr_t)cpu_switch;
 	else if (pcBetween(_locore, _locoreEnd)) {
 		subr = (uintptr_t)_locore;
-		ra = 0;
-		goto done;
-	}
-
-	/* Check for bad PC. */
-	if (!MIPS_IS_VALID_KERNELADDR(pc)) {
-		db_printf("PC 0x%jx: not in kernel\n", (uintmax_t)pc);
 		ra = 0;
 		goto done;
 	}
@@ -190,11 +261,17 @@ loop:
 			if (MIPS_START_OF_FUNCTION(instr))
 				break;
 
+			if (!MIPS_IS_VALID_KERNELADDR(sp) &&
+			    MIPS_START_OF_UL_FUNCTION(instr))
+				break;
+
+#ifdef notyet
 			if (MIPS_END_OF_FUNCTION(instr)) {
 				/* skip over branch-delay slot instruction */
 				va += 2 * sizeof(int);
 				break;
 			}
+#endif
 
  			va -= sizeof(int);
 		}
@@ -252,7 +329,7 @@ loop:
 
 		case OP_SW:
 			/* look for saved registers on the stack */
-			if (i.IType.rs != 29)
+			if (i.IType.rs != SP)
 				break;
 			/*
 			 * only restore the first one except RA for
@@ -267,27 +344,27 @@ loop:
 			}
 			mask |= (1 << i.IType.rt);
 			switch (i.IType.rt) {
-			case 4:/* a0 */
+			case A0:/* 4 */
 				args[0] = kdbpeek((int *)(sp + (short)i.IType.imm));
 				valid_args[0] = 1;
 				break;
 
-			case 5:/* a1 */
+			case A1:/* 5 */
 				args[1] = kdbpeek((int *)(sp + (short)i.IType.imm));
 				valid_args[1] = 1;
 				break;
 
-			case 6:/* a2 */
+			case A2:/* 6 */
 				args[2] = kdbpeek((int *)(sp + (short)i.IType.imm));
 				valid_args[2] = 1;
 				break;
 
-			case 7:/* a3 */
+			case A3:/* 7 */
 				args[3] = kdbpeek((int *)(sp + (short)i.IType.imm));
 				valid_args[3] = 1;
 				break;
 
-			case 31:	/* ra */
+			case RA: /* 31 */
 				ra = kdbpeek((int *)(sp + (short)i.IType.imm));
 			}
 			break;
@@ -349,10 +426,11 @@ done:
 			db_printf("?");
 	}
 
-	db_printf(") ra %jx sp %jx sz %d\n",
+	db_printf(") ra %08jx sp %jx sz %d subr %jx\n",
 	    (uintmax_t)(u_register_t) ra,
 	    (uintmax_t)(u_register_t) sp,
-	    stksize);
+		stksize,
+		(uintmax_t)(u_register_t) subr);
 
 	if (trapframe) {
 #define	TF_REG(base, reg)	((base) + CALLFRAME_SIZ + ((reg) * SZREG))
@@ -371,7 +449,7 @@ done:
 #endif
 #undef TF_REG
 		db_printf("--- exception, cause %jx badvaddr %jx ---\n",
-		    (uintmax_t)cause, (uintmax_t)badvaddr);
+		    (uintmax_t)(u_register_t)cause, (uintmax_t)(u_register_t)badvaddr);
 		goto loop;
 	} else if (ra) {
 		if (pc == ra && stksize == 0)
