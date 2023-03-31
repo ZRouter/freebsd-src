@@ -3,7 +3,7 @@
 #
 # Warning flags for compiling the kernel and components of the kernel:
 #
-CWARNFLAGS?=	-Wall -Wredundant-decls -Wnested-externs -Wstrict-prototypes \
+CWARNFLAGS?=	-Wall -Wnested-externs -Wstrict-prototypes \
 		-Wmissing-prototypes -Wpointer-arith -Wcast-qual \
 		-Wundef -Wno-pointer-sign ${FORMAT_EXTENSIONS} \
 		-Wmissing-include-dirs -fdiagnostics-show-option \
@@ -82,6 +82,10 @@ CWARNEXTRA+=	-Wno-error=memset-elt-size
 .if ${COMPILER_VERSION} >= 80000
 CWARNEXTRA+=	-Wno-error=packed-not-aligned
 .endif
+.if ${COMPILER_VERSION} >= 90100
+CWARNEXTRA+=	-Wno-address-of-packed-member			\
+		-Wno-error=alloca-larger-than=
+.endif
 .else
 # For gcc 4.2, eliminate the too-often-wrong warnings about uninitialized vars.
 CWARNEXTRA?=	-Wno-uninitialized
@@ -89,7 +93,11 @@ CWARNEXTRA?=	-Wno-uninitialized
 # the few files that are already known to generate cast-qual warnings.
 NO_WCAST_QUAL= -Wno-cast-qual
 .endif
-.endif
+
+# GCC produces false positives for functions that switch on an
+# enum (GCC bug 87950)
+CWARNFLAGS+=	-Wno-return-type
+.endif	# gcc
 
 # This warning is utter nonsense
 CWARNFLAGS+=	-Wno-format-zero-length

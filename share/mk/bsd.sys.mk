@@ -62,7 +62,7 @@ CWARNFLAGS+=	-Wcast-align
 .endif # !NO_WCAST_ALIGN !NO_WCAST_ALIGN.${COMPILER_TYPE}
 .endif # WARNS >= 4
 .if ${WARNS} >= 6
-CWARNFLAGS+=	-Wchar-subscripts -Winline -Wnested-externs -Wredundant-decls\
+CWARNFLAGS+=	-Wchar-subscripts -Winline -Wnested-externs \
 		-Wold-style-definition
 .if !defined(NO_WMISSING_VARIABLE_DECLARATIONS)
 CWARNFLAGS.clang+=	-Wmissing-variable-declarations
@@ -163,6 +163,7 @@ CWARNFLAGS+=	-Wno-error=address			\
 # GCC 6.1.0
 .if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60100
 CWARNFLAGS+=	-Wno-error=empty-body			\
+		-Wno-error=maybe-uninitialized		\
 		-Wno-error=nonnull-compare		\
 		-Wno-error=shift-negative-value		\
 		-Wno-error=tautological-compare		\
@@ -194,6 +195,12 @@ CWARNFLAGS+=	-Wno-error=aggressive-loop-optimizations	\
 		-Wno-error=restrict				\
 		-Wno-error=sizeof-pointer-memaccess		\
 		-Wno-error=stringop-truncation
+.endif
+
+.if ${COMPILER_TYPE} == "gcc"
+# GCC produces false positives for functions that switch on an
+# enum (GCC bug 87950)
+CWARNFLAGS+=	-Wno-return-type
 .endif
 
 # How to handle FreeBSD custom printf format specifiers.
