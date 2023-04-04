@@ -83,7 +83,7 @@ ASSYM(U_PCB_CONTEXT, offsetof(struct pcb, pcb_context));
 ASSYM(U_PCB_ONFAULT, offsetof(struct pcb, pcb_onfault));
 ASSYM(U_PCB_FPREGS, offsetof(struct pcb, pcb_regs.f0));
 #ifdef MIPS_DSP_SUPPORT
-ASSYM(U_PCB_DSPREGS, offsetof(struct pcb, pcb_regs.mullo1));
+ASSYM(U_PCB_DSPREGS, offsetof(struct pcb, pcb_regs.f0));
 #endif
 
 ASSYM(PC_CURPCB, offsetof(struct pcpu, pc_curpcb));

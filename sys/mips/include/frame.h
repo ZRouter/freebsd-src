@@ -41,56 +41,6 @@
 
 /* Note: This must also match regnum.h and regdef.h */
 
-#ifdef MIPS_DSP_SUPPORT
-struct trapframe_dsp {
-        register_t	mullo1;
-        register_t	mulhi1;
-        register_t	mullo2;
-        register_t	mulhi2;
-        register_t	mullo3;
-        register_t	mulhi3;
-        register_t	dspctl;
-        register_t	__pad[37];
-};
-#endif
-
-struct trapframe_fp {
-	f_register_t	f0;
-	f_register_t	f1;
-	f_register_t	f2;
-	f_register_t	f3;
-	f_register_t	f4;
-	f_register_t	f5;
-	f_register_t	f6;
-	f_register_t	f7;
-	f_register_t	f8;
-	f_register_t	f9;
-	f_register_t	f10;
-	f_register_t	f11;
-	f_register_t	f12;
-	f_register_t	f13;
-	f_register_t	f14;
-	f_register_t	f15;
-	f_register_t	f16;
-	f_register_t	f17;
-	f_register_t	f18;
-	f_register_t	f19;
-	f_register_t	f20;
-	f_register_t	f21;
-	f_register_t	f22;
-	f_register_t	f23;
-	f_register_t	f24;
-	f_register_t	f25;
-	f_register_t	f26;
-	f_register_t	f27;
-	f_register_t	f28;
-	f_register_t	f29;
-	f_register_t	f30;
-	f_register_t	f31;
-	register_t	fsr;
-        register_t	fir;
-};
-
 struct trapframe {
 	register_t	zero;
 	register_t	ast;
@@ -153,12 +103,40 @@ struct trapframe {
 
 /* From here and on, only saved user processes. */
 
-	union {
-		struct trapframe_fp;
-#ifdef MIPS_DSP_SUPPORT
-		struct trapframe_dsp;
-#endif
-	};
+	f_register_t	f0;
+	f_register_t	f1;
+	f_register_t	f2;
+	f_register_t	f3;
+	f_register_t	f4;
+	f_register_t	f5;
+	f_register_t	f6;
+	f_register_t	f7;
+	f_register_t	f8;
+	f_register_t	f9;
+	f_register_t	f10;
+	f_register_t	f11;
+	f_register_t	f12;
+	f_register_t	f13;
+	f_register_t	f14;
+	f_register_t	f15;
+	f_register_t	f16;
+	f_register_t	f17;
+	f_register_t	f18;
+	f_register_t	f19;
+	f_register_t	f20;
+	f_register_t	f21;
+	f_register_t	f22;
+	f_register_t	f23;
+	f_register_t	f24;
+	f_register_t	f25;
+	f_register_t	f26;
+	f_register_t	f27;
+	f_register_t	f28;
+	f_register_t	f29;
+	f_register_t	f30;
+	f_register_t	f31;
+	register_t	fsr;
+        register_t	fir;
 
 };
 
