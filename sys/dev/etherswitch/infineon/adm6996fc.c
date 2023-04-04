@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2016 Hiroki Mori
+ * Copyright (c) 2016-2023 Hiroki Mori
  * Copyright (c) 2013 Luiz Otavio O Souza.
  * Copyright (c) 2011-2012 Stefan Bethke.
  * Copyright (c) 2012 Adrian Chadd.
@@ -85,6 +85,8 @@
 
 #define	ADM6996FC_PHY_SIZE	0x20
 
+#define	ADM6996FC_MAC_ENTREIS	128
+
 MALLOC_DECLARE(M_ADM6996FC);
 MALLOC_DEFINE(M_ADM6996FC, "adm6996fc", "adm6996fc data structures");
 
@@ -103,6 +105,12 @@ struct adm6996fc_softc {
 	struct ifnet	**ifp;
 	struct callout	callout_tick;
 	etherswitch_info_t	info;
+	/* ATU (address table unit) support */
+	struct {
+		int count;
+		int size;
+		etherswitch_atu_entry_t *entries;
+	} atu;
 };
 
 #define	ADM6996FC_LOCK(_sc)			\
@@ -268,6 +276,18 @@ adm6996fc_attach(device_t dev)
 		err = ENOMEM;
 		goto failed;
 	}
+
+	/* Allocate entreis ATU table; hopefully its big enough! */
+	/* XXX TODO: make this per chip */
+	sc->atu.entries = malloc(sizeof(etherswitch_atu_entry_t) *
+	    ADM6996FC_MAC_ENTREIS, M_DEVBUF, M_NOWAIT);
+	if (sc->atu.entries == NULL) {
+		device_printf(sc->sc_dev, "%s: failed to allocate ATU table\n",
+		    __func__);
+		return (ENXIO);
+	}
+	sc->atu.count = 0;
+	sc->atu.size = ADM6996FC_MAC_ENTREIS;
 
 	/*
 	 * Attach the PHYs and complete the bus enumeration.
@@ -713,6 +733,209 @@ adm6996fc_setconf(device_t dev, etherswitch_conf_t *conf)
 	return (0);
 }
 
+static int
+adm6996fc_atu_fetch_table(device_t dev, etherswitch_atu_table_t *table)
+{
+	struct adm6996fc_softc *sc;
+	device_t parent;
+	int err, nitems;
+	int command;
+	int result[4];
+	int val;
+	uint8_t *macaddr;
+
+	sc = device_get_softc(dev);
+	parent = device_get_parent(dev);
+
+	ADM6996FC_LOCK(sc);
+	/* Initial setup */
+	nitems = 0;
+	err = 0;
+
+	val = 0x8000;
+	while(val & 0x8000){
+		val = ADM6996FC_READREG(parent, 0x125);
+	}
+	command = 0x030;    /* initial the first address */
+	ADM6996FC_WRITEREG(parent, 0x11f, command);
+	val = 0x8000;
+	while(val & 0x8000){
+		val = ADM6996FC_READREG(parent, 0x125);
+	}
+
+	while(1) {
+		val = 0x8000;
+		while(val & 0x8000){
+			val = ADM6996FC_READREG(parent, 0x125);
+		}
+
+		command = 0x02a;   /* ??? */
+		ADM6996FC_WRITEREG(parent, 0x11f, command);
+
+		val = 0x8000;
+		while(val & 0x8000){
+			val = ADM6996FC_READREG(parent, 0x125);
+		}
+		val = ((val & 0x7000) >> 12);   /* result ,status5[14:12] */
+
+		if (val == 0) {
+			result[0] = ADM6996FC_READREG(parent, 0x120);
+			result[1] = ADM6996FC_READREG(parent, 0x121);
+			result[2] = ADM6996FC_READREG(parent, 0x122);
+			result[3] = ADM6996FC_READREG(parent, 0x123);
+
+			sc->atu.entries[nitems].es_portmask = nitems;
+			macaddr = sc->atu.entries[nitems].es_macaddr;
+			macaddr[0] = result[2] >> 8;
+			macaddr[1] = result[2] & 0xff;
+			macaddr[2] = result[1] >> 8;
+			macaddr[3] = result[1] & 0xff;
+			macaddr[4] = result[0] >> 8;
+			macaddr[5] = result[0] & 0xff;
+			sc->atu.entries[nitems].es_portmask =
+			    (result[3] >> 4) & 0x3f;
+			++nitems;
+		} else {
+//			device_printf(sc->sc_dev, "ATU NG %d\n", val);
+			break;
+		}
+	}
+
+	/* fetch - ideally yes we'd fetch into a separate table then switch */
+	sc->atu.count = nitems;
+	ADM6996FC_UNLOCK(sc);
+
+	table->es_nitems = nitems;
+
+	return (err);
+}
+
+static int
+adm6996fc_atu_fetch_table_entry(device_t dev, etherswitch_atu_entry_t *e)
+{
+	struct adm6996fc_softc *sc;
+	int id;
+
+	sc = device_get_softc(dev);
+	id = e->id;
+
+	ADM6996FC_LOCK(sc);
+	if (id > sc->atu.count) {
+		ADM6996FC_UNLOCK(sc);
+		return (ENOENT);
+	}
+
+	memcpy(e, &sc->atu.entries[id], sizeof(*e));
+	ADM6996FC_UNLOCK(sc);
+	return (0);
+}
+
+static int
+adm6996fc_atu_flush_all(device_t dev)
+{
+	struct adm6996fc_softc *sc;
+	device_t parent;
+	int err;
+	int command;
+	int param[4];
+	int val, i;
+	etherswitch_atu_table_t table;
+
+	sc = device_get_softc(dev);
+	parent = device_get_parent(dev);
+	ADM6996FC_LOCK(sc);
+	err = 0;
+
+	/* may be this chip have all mac address entry delete command
+	   but I don't know it. then get all entries */
+
+	adm6996fc_atu_fetch_table(dev, &table);
+
+	for(i = 0;i < table.es_nitems; ++i) {
+
+		param[0] = (sc->atu.entries[i].es_macaddr[4] << 8) |
+		    sc->atu.entries[i].es_macaddr[5];
+		param[1] = (sc->atu.entries[i].es_macaddr[2] << 8) |
+		    sc->atu.entries[i].es_macaddr[3];
+		param[2] = (sc->atu.entries[i].es_macaddr[0] << 8) |
+		    sc->atu.entries[i].es_macaddr[1];
+		param[3] = sc->atu.entries[i].es_portmask << 4;
+		val = 0x8000;
+		while(val & 0x8000){
+			val = ADM6996FC_READREG(parent, 0x125);
+		}
+
+		ADM6996FC_WRITEREG(parent, 0x11a, param[0]);
+		ADM6996FC_WRITEREG(parent, 0x11b, param[1]);
+		ADM6996FC_WRITEREG(parent, 0x11c, param[2]);
+		ADM6996FC_WRITEREG(parent, 0x11d, param[3]);
+		command = 0x01f;   /* erased an existed address */
+		ADM6996FC_WRITEREG(parent, 0x11f, command);
+
+		val = 0x8000;
+		while(val & 0x8000){
+			val = ADM6996FC_READREG(parent, 0x125);
+		}
+	}
+
+	/* Invalidate cached ATU */
+	sc->atu.count = 0;
+	ADM6996FC_UNLOCK(sc);
+	return (err);
+}
+
+static int
+adm6996fc_atu_flush_port(device_t dev, int port)
+{
+	struct adm6996fc_softc *sc;
+	device_t parent;
+	int err;
+	int command;
+	int param[4];
+	int val, i;
+	etherswitch_atu_table_t table;
+
+	sc = device_get_softc(dev);
+	parent = device_get_parent(dev);
+	ADM6996FC_LOCK(sc);
+	err = 0;
+	adm6996fc_atu_fetch_table(dev, &table);
+
+	for(i = 0;i < table.es_nitems; ++i) {
+		if (sc->atu.entries[i].es_portmask != (1 << port))
+			continue;
+
+		param[0] = (sc->atu.entries[i].es_macaddr[4] << 8) |
+		    sc->atu.entries[i].es_macaddr[5];
+		param[1] = (sc->atu.entries[i].es_macaddr[2] << 8) |
+		    sc->atu.entries[i].es_macaddr[3];
+		param[2] = (sc->atu.entries[i].es_macaddr[0] << 8) |
+		    sc->atu.entries[i].es_macaddr[1];
+		param[3] = sc->atu.entries[i].es_portmask << 4;
+		val = 0x8000;
+		while(val & 0x8000){
+			val = ADM6996FC_READREG(parent, 0x125);
+		}
+
+		ADM6996FC_WRITEREG(parent, 0x11a, param[0]);
+		ADM6996FC_WRITEREG(parent, 0x11b, param[1]);
+		ADM6996FC_WRITEREG(parent, 0x11c, param[2]);
+		ADM6996FC_WRITEREG(parent, 0x11d, param[3]);
+		command = 0x01f;   /* erased an existed address */
+		ADM6996FC_WRITEREG(parent, 0x11f, command);
+
+		val = 0x8000;
+		while(val & 0x8000){
+			val = ADM6996FC_READREG(parent, 0x125);
+		}
+	}
+
+	/* Invalidate cached ATU */
+	sc->atu.count = 0;
+	ADM6996FC_UNLOCK(sc);
+	return (err);
+}
+
 static void
 adm6996fc_statchg(device_t dev)
 {
@@ -846,6 +1069,11 @@ static device_method_t adm6996fc_methods[] = {
 	DEVMETHOD(etherswitch_setvgroup,	adm6996fc_setvgroup),
 	DEVMETHOD(etherswitch_setconf,	adm6996fc_setconf),
 	DEVMETHOD(etherswitch_getconf,	adm6996fc_getconf),
+	DEVMETHOD(etherswitch_flush_all, adm6996fc_atu_flush_all),
+	DEVMETHOD(etherswitch_flush_port, adm6996fc_atu_flush_port),
+	DEVMETHOD(etherswitch_fetch_table, adm6996fc_atu_fetch_table),
+	DEVMETHOD(etherswitch_fetch_table_entry,
+	    adm6996fc_atu_fetch_table_entry),
 
 	DEVMETHOD_END
 };
