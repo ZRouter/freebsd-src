@@ -51,6 +51,7 @@ static uint32_t mtk_soc_socid = MTK_SOC_UNKNOWN;
 static uint32_t mtk_soc_uartclk = 0;
 static uint32_t mtk_soc_cpuclk = MTK_CPU_CLK_880MHZ;
 static uint32_t mtk_soc_timerclk = MTK_CPU_CLK_880MHZ / 2;
+static uint32_t mtk_soc_rststat = 0;
 
 static uint32_t mtk_soc_chipid0_3 = MTK_UNKNOWN_CHIPID0_3;
 static uint32_t mtk_soc_chipid4_7 = MTK_UNKNOWN_CHIPID4_7;
@@ -393,6 +394,8 @@ mtk_soc_try_early_detect(void)
 		break;
 	}
 
+	mtk_soc_rststat = bus_space_read_4(bst, bsh, SYSCTL_RSTSTAT);
+
 	bus_space_unmap(bst, bsh, MTK_DEFAULT_SIZE);
 }
 
@@ -444,6 +447,13 @@ mtk_soc_get_socid(void)
 {
 
 	return mtk_soc_socid;
+}
+
+uint32_t
+mtk_soc_get_rststat(void)
+{
+
+	return mtk_soc_rststat;
 }
 
 /*

@@ -127,6 +127,7 @@ extern uint32_t mtk_soc_get_uartclk(void);
 extern uint32_t mtk_soc_get_cpuclk(void);
 extern uint32_t mtk_soc_get_timerclk(void);
 extern uint32_t mtk_soc_get_socid(void);
+extern uint32_t mtk_soc_get_rststat(void);
 
 extern int	mtk_soc_reset_device(device_t);
 extern int	mtk_soc_stop_clock(device_t);

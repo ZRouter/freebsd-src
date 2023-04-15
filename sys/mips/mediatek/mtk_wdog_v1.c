@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD$");
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <mips/mediatek/mtk_sysctl.h>
+#include <mips/mediatek/mtk_soc.h>
 
 /*
  * register space access macros
@@ -67,6 +68,7 @@ struct mtk_wdog_softc {
 	int armed;
 	int reboot_from_watchdog;
 	int debug;
+	int rststat;
 };
 
 static const struct ofw_compat_data compat_data[] = {
@@ -131,6 +133,11 @@ mtk_wdog_sysctl(device_t dev)
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 	    "debug", CTLFLAG_RW, &sc->debug, 0,
 	    "enable watchdog debugging");
+
+	sc->rststat = mtk_soc_get_rststat();
+	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
+	    "rststat", CTLFLAG_RD, &sc->rststat, 0,
+	    "reset status register");
 }
 
 static int
