@@ -395,6 +395,9 @@ mtk_soc_try_early_detect(void)
 	}
 
 	mtk_soc_rststat = bus_space_read_4(bst, bsh, SYSCTL_RSTSTAT);
+	/* clear bit */
+	if (mtk_soc_rststat)
+		bus_space_write_4(bst, bsh, SYSCTL_RSTSTAT, mtk_soc_rststat);
 
 	bus_space_unmap(bst, bsh, MTK_DEFAULT_SIZE);
 }
