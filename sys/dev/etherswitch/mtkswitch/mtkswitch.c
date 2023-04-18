@@ -205,6 +205,18 @@ mtkswitch_attach(device_t dev)
 
 	mtx_init(&sc->sc_mtx, "mtkswitch", NULL, MTX_DEF);
 
+	/* Allocate a 128 entry ATU table; hopefully its big enough! */
+	/* XXX TODO: make this per chip */
+	sc->atu.entries = malloc(sizeof(etherswitch_atu_entry_t) * 128,
+	    M_DEVBUF, M_NOWAIT);
+	if (sc->atu.entries == NULL) {
+		device_printf(sc->sc_dev, "%s: failed to allocate ATU table\n",
+		    __func__);
+		return (ENXIO);
+	}
+	sc->atu.count = 0;
+	sc->atu.size = 128;
+
 	/* Reset the switch */
 	if (sc->hal.mtkswitch_reset(sc)) {
 		DPRINTF(dev, "%s: mtkswitch_reset: failed\n", __func__);
@@ -577,6 +589,49 @@ mtkswitch_setconf(device_t dev, etherswitch_conf_t *conf)
 }
 
 static int
+mtkswitch_atu_fetch_table(device_t dev, etherswitch_atu_table_t *table)
+{
+	struct mtkswitch_softc *sc;
+	int err;
+
+	sc = device_get_softc(dev);
+
+	MTKSWITCH_LOCK(sc);
+
+	err = sc->hal.mtkswitch_atu_fetch_table(sc);
+
+	if (err == 0)
+		table->es_nitems = sc->atu.count;
+	else
+		table->es_nitems = 0;
+
+	MTKSWITCH_UNLOCK(sc);
+
+	return (0);
+}
+
+static int
+mtkswitch_atu_fetch_table_entry(device_t dev, etherswitch_atu_entry_t *e)
+{
+	struct mtkswitch_softc *sc;
+	int id;
+
+	sc = device_get_softc(dev);
+	id = e->id;
+
+	MTKSWITCH_LOCK(sc);
+	if (id > sc->atu.count) {
+		MTKSWITCH_UNLOCK(sc);
+		return (ENOENT);
+	}
+
+	memcpy(e, &sc->atu.entries[id], sizeof(*e));
+	MTKSWITCH_UNLOCK(sc);
+
+	return (0);
+}
+
+static int
 mtkswitch_getvgroup(device_t dev, etherswitch_vlangroup_t *e)
 {
         struct mtkswitch_softc *sc = device_get_softc(dev);
@@ -656,6 +711,9 @@ static device_method_t mtkswitch_methods[] = {
 	DEVMETHOD(etherswitch_setvgroup,	mtkswitch_setvgroup),
 	DEVMETHOD(etherswitch_getconf,	mtkswitch_getconf),
 	DEVMETHOD(etherswitch_setconf,	mtkswitch_setconf),
+	DEVMETHOD(etherswitch_fetch_table, mtkswitch_atu_fetch_table),
+	DEVMETHOD(etherswitch_fetch_table_entry,
+	    mtkswitch_atu_fetch_table_entry),
 
 	DEVMETHOD_END
 };

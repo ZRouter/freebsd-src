@@ -526,6 +526,63 @@ mtkswitch_vlan_set_pvid(struct mtkswitch_softc *sc, int port, int pvid)
 	return (0);
 }
 
+/*
+ * Fetch a single entry from the ATU.
+ */
+static int
+mtkswitch_atu_fetch_table(struct mtkswitch_softc *sc)
+{
+	int nitems;
+	uint32_t ats0, ats1, ats2;
+	uint8_t *macaddr;
+
+	nitems = 0;
+
+	while (!(MTKSWITCH_READ(sc, MTKSWITCH_ATS) & (1 << 2)))
+		DELAY(1000);
+
+	MTKSWITCH_WRITE(sc, MTKSWITCH_ATS, 1);
+	while(MTKSWITCH_READ(sc, MTKSWITCH_ATS) & 1)
+		DELAY(1000);
+
+	while((ats0 = MTKSWITCH_READ(sc, MTKSWITCH_ATS0)) & 1)
+		DELAY(1000);
+
+	while (1) {
+		if (ats0 & (1 << 1))
+			break;
+
+		ats1 = MTKSWITCH_READ(sc, MTKSWITCH_ATS1);
+		ats2 = MTKSWITCH_READ(sc, MTKSWITCH_ATS2);
+		if (ats0 & (3 << 4)) {   /* has age */
+			sc->atu.entries[nitems].es_portmask = nitems;
+			macaddr = sc->atu.entries[nitems].es_macaddr;
+			macaddr[0] = ats2 >> 24;
+			macaddr[1] = (ats2 >> 16) & 0xff;
+			macaddr[2] = (ats2 >> 8) & 0xff;
+			macaddr[3] = ats2 & 0xff;
+			macaddr[4] = (ats1 >> 8) & 0xff;
+			macaddr[5] = ats1 & 0xff;
+			sc->atu.entries[nitems].es_portmask =
+			    1 << ((ats0 >> 12) & 7);
+			++nitems;
+		}
+		if (nitems == sc->atu.size)
+			break;
+		while(!(MTKSWITCH_READ(sc, MTKSWITCH_ATS) & (1 << 2)))
+			DELAY(1000);
+
+		MTKSWITCH_WRITE(sc, MTKSWITCH_ATS, 2);
+		while(MTKSWITCH_READ(sc, MTKSWITCH_ATS) & 2)
+			DELAY(1000);
+		while((ats0 = MTKSWITCH_READ(sc, MTKSWITCH_ATS0)) & 1)
+			DELAY(1000);
+	}
+
+	sc->atu.count = nitems;
+	return (0);
+}
+
 extern void
 mtk_attach_switch_rt3050(struct mtkswitch_softc *sc)
 {
@@ -555,4 +612,5 @@ mtk_attach_switch_rt3050(struct mtkswitch_softc *sc)
 	sc->hal.mtkswitch_phy_write = mtkswitch_phy_write;
 	sc->hal.mtkswitch_reg_read = mtkswitch_reg_read;
 	sc->hal.mtkswitch_reg_write = mtkswitch_reg_write;
+	sc->hal.mtkswitch_atu_fetch_table = mtkswitch_atu_fetch_table;
 }

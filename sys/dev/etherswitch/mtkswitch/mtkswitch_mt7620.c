@@ -523,6 +523,58 @@ mtkswitch_vlan_set_pvid(struct mtkswitch_softc *sc, int port, int pvid)
 	return (0);
 }
 
+/*
+ * Fetch a single entry from the ATU.
+ */
+static int
+mtkswitch_atu_fetch_table(struct mtkswitch_softc *sc)
+{
+	int nitems;
+	uint32_t tsra1, tsra2, tsrad, atc;
+	uint8_t *macaddr;
+
+	MTKSWITCH_LOCK_ASSERT(sc, MA_OWNED);
+
+	nitems = 0;
+	/* Search MAC addresses */
+	while (sc->hal.mtkswitch_read(sc, MTKSWITCH_ATC) & ATC_BUSY);
+
+	sc->hal.mtkswitch_write(sc, MTKSWITCH_ATC, ATC_BUSY |
+	    ATC_AC_CMD_START_SEARCH);
+
+	atc = sc->hal.mtkswitch_read(sc, MTKSWITCH_ATC);
+	while(1) {
+		if (atc & (1 << 14))
+			break;
+		if (atc & (1 << 13)) {
+			tsra1 = sc->hal.mtkswitch_read(sc, MTKSWITCH_TSRA1);
+			tsra2 = sc->hal.mtkswitch_read(sc, MTKSWITCH_TSRA2);
+			tsrad = sc->hal.mtkswitch_read(sc, MTKSWITCH_TSRAD);
+			sc->atu.entries[nitems].es_portmask = nitems;
+			macaddr = sc->atu.entries[nitems].es_macaddr;
+			macaddr[0] = tsra1 >> 24;
+			macaddr[1] = (tsra1 >> 16) & 0xff;
+			macaddr[2] = (tsra1 >> 8) & 0xff;
+			macaddr[3] = tsra1 & 0xff;
+			macaddr[4] = (tsra2 >> 24) & 0xff;
+			macaddr[5] = (tsra2 >> 16) & 0xff;
+			sc->atu.entries[nitems].es_portmask =
+			    (tsrad >> 4) & 0xff;
+			++nitems;
+		}
+		if (nitems == sc->atu.size)
+			break;
+		while (sc->hal.mtkswitch_read(sc, MTKSWITCH_ATC) & ATC_BUSY);
+
+		sc->hal.mtkswitch_write(sc, MTKSWITCH_ATC, ATC_BUSY |
+		    ATC_AC_CMD_NEXT_SEARCH);
+		atc = sc->hal.mtkswitch_read(sc, MTKSWITCH_ATC);
+	}
+
+	sc->atu.count = nitems;
+	return (0);
+}
+
 extern void
 mtk_attach_switch_mt7620(struct mtkswitch_softc *sc)
 {
@@ -561,4 +613,5 @@ mtk_attach_switch_mt7620(struct mtkswitch_softc *sc)
 	sc->hal.mtkswitch_phy_write = mtkswitch_phy_write;
 	sc->hal.mtkswitch_reg_read = mtkswitch_reg_read;
 	sc->hal.mtkswitch_reg_write = mtkswitch_reg_write;
+	sc->hal.mtkswitch_atu_fetch_table = mtkswitch_atu_fetch_table;
 }

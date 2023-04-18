@@ -74,6 +74,13 @@ struct mtkswitch_softc {
 
 	uint32_t	vlan_mode;
 
+	/* ATU (address table unit) support */
+	struct {
+		int count;
+		int size;
+		etherswitch_atu_entry_t *entries;
+	} atu;
+
 	struct {
 		/* Global setup */
 		int (* mtkswitch_reset) (struct mtkswitch_softc *);
@@ -87,6 +94,7 @@ struct mtkswitch_softc {
 
 		/* ATU functions */
 		int (* mtkswitch_atu_flush) (struct mtkswitch_softc *);
+		int (* mtkswitch_atu_fetch_table) (struct mtkswitch_softc *);
 
 		/* VLAN functions */
 		int (* mtkswitch_port_vlan_setup) (struct mtkswitch_softc *,

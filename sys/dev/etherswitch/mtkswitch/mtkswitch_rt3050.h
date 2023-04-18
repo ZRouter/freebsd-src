@@ -41,6 +41,11 @@
 #define		VMSC_OFF(x)	((x & 3) * 8)
 #define		VMSC_MASK	0xff
 
+#define	MTKSWITCH_ATS		0x0024
+#define	MTKSWITCH_ATS0		0x0028
+#define	MTKSWITCH_ATS1		0x002c
+#define	MTKSWITCH_ATS2		0x0030
+
 #define	MTKSWITCH_POA		0x0080
 #define		POA_PRT_DPX(x)	((1<<9)<<(x))
 #define		POA_FE_SPEED(x) ((1<<0)<<(x))

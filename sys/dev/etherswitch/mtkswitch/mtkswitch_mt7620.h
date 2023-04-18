@@ -33,6 +33,12 @@
 #define		ATC_BUSY		(1u<<15)
 #define		ATC_AC_MAT_NON_STATIC_MACS	(4u<<8)
 #define		ATC_AC_CMD_CLEAN	(2u<<0)
+#define		ATC_AC_CMD_START_SEARCH	(4u<<0)
+#define		ATC_AC_CMD_NEXT_SEARCH	(5u<<0)
+
+#define	MTKSWITCH_TSRA1	0x0084
+#define	MTKSWITCH_TSRA2	0x0088
+#define	MTKSWITCH_TSRAD	0x008c
 
 #define	MTKSWITCH_VTCR	0x0090
 #define		VTCR_BUSY		(1u<<31)
