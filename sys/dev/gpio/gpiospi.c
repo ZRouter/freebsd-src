@@ -304,6 +304,30 @@ gpio_spi_attach(device_t dev)
 static int
 gpio_spi_detach(device_t dev)
 {
+	struct gpio_spi_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	if (sc->sc_sclk != NULL)
+		gpio_pin_release(sc->sc_sclk);
+
+	if (sc->sc_miso != NULL)
+		gpio_pin_release(sc->sc_miso);
+
+	if (sc->sc_mosi != NULL)
+		gpio_pin_release(sc->sc_mosi);
+
+	if (sc->sc_cs0 != NULL)
+		gpio_pin_release(sc->sc_cs0);
+
+	if (sc->sc_cs1 != NULL)
+		gpio_pin_release(sc->sc_cs1);
+
+	if (sc->sc_cs2 != NULL)
+		gpio_pin_release(sc->sc_cs2);
+
+	if (sc->sc_cs3 != NULL)
+		gpio_pin_release(sc->sc_cs3);
 
 	return (0);
 }
