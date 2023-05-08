@@ -2,11 +2,18 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/2/93
 
 .include <src.opts.mk>
+.include <bsd.linker.mk>
 
 PACKAGE=rescue
 MAN=
 MK_SSP=	no
 NO_SHARED=	yes
+
+# lld >= 16 became more strict about multiply defined symbols. Since there are
+# many of those in crunchgen'd programs, turn off the check.
+.if ${LINKER_TYPE} == "lld" && ${LINKER_VERSION} >= 160000
+LDFLAGS+=	-Wl,--allow-multiple-definition
+.endif
 
 PROG=	rescue
 BINDIR?=/rescue
