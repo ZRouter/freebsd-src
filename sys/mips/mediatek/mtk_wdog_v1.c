@@ -66,7 +66,6 @@ struct mtk_wdog_softc {
 	device_t dev;
 	struct resource *sc_mem_res;
 	int armed;
-	int reboot_from_watchdog;
 	int debug;
 	int rststat;
 };
@@ -99,6 +98,7 @@ mtk_wdog_fn(void *private, u_int cmd, int *error)
 			WDOG_WRITE(sc, 0x8, 0x0f | 0x30 | 0x80);
 			sc->armed = 1;
 		}
+		*error = 0;
 	} else {
 		if (sc->debug)
 			device_printf(dev, "mtk_wdog_fn: disarming\n");
@@ -133,6 +133,9 @@ mtk_wdog_sysctl(device_t dev)
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
 	    "debug", CTLFLAG_RW, &sc->debug, 0,
 	    "enable watchdog debugging");
+	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
+	    "armed", CTLFLAG_RD, &sc->armed, 0,
+	    "whether the watchdog is armed");
 
 	sc->rststat = mtk_soc_get_rststat();
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
@@ -155,7 +158,6 @@ mtk_wdog_attach(device_t dev)
 	}
 
 	/* Initialise */
-	sc->reboot_from_watchdog = 0;
 	sc->armed = 0;
 	sc->debug = 0;
 
