@@ -403,7 +403,7 @@ static uint8_t
 gpio_spi_txrx(struct gpio_spi_softc *sc, int cs, int mode, uint8_t data)
 {
 	uint32_t mask, out = 0;
-	unsigned int bit;
+	bool bit;
 
 	/* called with locked gpiobus */
 
