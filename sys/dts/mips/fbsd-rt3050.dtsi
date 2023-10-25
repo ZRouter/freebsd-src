@@ -160,8 +160,8 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			pinctrl-names = "default";
-			pinctrl-0 = <&i2c_pins>;
+//			pinctrl-names = "default";
+//			pinctrl-0 = <&i2c_pins>;
 
 			status = "disabled";
 		};
