@@ -151,7 +151,7 @@
 		};
 
 		i2c: i2c@900 {
-			compatible = "link,rt5350-i2c", "ralink,rt2880-i2c";
+			compatible = "link,rt3050-i2c", "ralink,rt2880-i2c";
 			reg = <0x900 0x100>;
 
 			resets = <&rstctrl 16>;
@@ -160,8 +160,8 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-//			pinctrl-names = "default";
-//			pinctrl-0 = <&i2c_pins>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&i2c_pins>;
 
 			status = "disabled";
 		};
@@ -215,6 +215,13 @@
 			sdram {
 				ralink,group = "sdram";
 				ralink,function = "sdram";
+			};
+		};
+
+		i2c_pins: i2c {
+			spi {
+				ralink,group = "i2c";
+				ralink,function = "i2c";
 			};
 		};
 
