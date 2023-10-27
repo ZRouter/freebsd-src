@@ -223,10 +223,7 @@ rtc8583_gettime(device_t dev, struct timespec *ts)
 		if (ytmp > y)
 			sreg += 4;
 		
-		if ((err = iicbus_request_bus(sc->busdev, sc->dev, IIC_WAIT)) != 0)
-			return (err);
 		rtc8583_write1(sc, RTC8583_USERSRAM_REG, sreg);
-		iicbus_release_bus(sc->busdev, sc->dev);
 	}
 
 	if (!validbcd(tregs.msec))
@@ -267,14 +264,11 @@ rtc8583_settime(device_t dev, struct timespec *ts)
 	tregs.day   = bct.day | (bct.year & 0x03 << 6);
 	tregs.month = bct.mon;
 
-	if ((err = iicbus_request_bus(sc->busdev, sc->dev, IIC_WAIT)) != 0)
-		return (err);
 	err = rtc8583_writeto(sc->dev, RTC8583_SC_REG, &tregs,
 	    sizeof(tregs), IIC_WAIT);
 	sreg = bcd2bin(bct.year & 0xff);
 	/* save to year to sram */
 	rtc8583_write1(sc, RTC8583_USERSRAM_REG, sreg);
-	iicbus_release_bus(sc->busdev, sc->dev);
 
 	return (err);
 }
