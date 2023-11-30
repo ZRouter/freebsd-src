@@ -95,6 +95,7 @@ static int mtk_iic_repeated_start(device_t dev, u_char slave, int timeout);
 static struct ofw_compat_data compat_data[] = {
 	{ "ralink,rt2880-i2c",  1 },
 	{ "ralink,rt3050-i2c",  1 },
+	{ "ralink,mt7620a-i2c",  1 },
 	{ NULL,                 0 }
 };
 
