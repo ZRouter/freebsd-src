@@ -61,8 +61,7 @@ __FBSDID("$FreeBSD$");
 #define GDMA_CLEAR_BITS(sc, reg, bits)	\
 	GDMA_WRITE(sc, reg, GDMA_READ(sc, (reg)) & ~(bits))
 
-#define MAXTIMER	0xffff
-#define GDMA_MAXFRAGS	8
+#define GDMA_MAXFRAGS		8
 #define GDMA_TX_DMA_SIZE	1024
 #define GDMA_RX_DMA_SIZE	1024
 
@@ -87,6 +86,8 @@ static const struct ofw_compat_data compat_data[] = {
 	/* Sentinel */
 	{ NULL,				0 }
 };
+
+struct mtk_gdma_softc *gdma_sc;
 
 static int
 mtk_gdma_probe(device_t dev)
@@ -122,8 +123,6 @@ static int
 mtk_gdma_alloc(struct mtk_gdma_softc *sc)
 {
 	struct gdma_dmamap_arg	ctx;
-//	struct gdma_txdesc	*txd;
-//	struct gdma_rxdesc	*rxd;
 	int			error, i;
 	int			gdma_tx_align, gdma_rx_align;
 
@@ -293,6 +292,8 @@ mtk_gdma_attach(device_t dev)
 	struct mtk_gdma_softc *sc = device_get_softc(dev);
 	int rid;
 
+	fdt_clock_enable_all(dev);
+
         rid = 0;
 	sc->sc_mem_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
 	    RF_ACTIVE);
@@ -309,13 +310,72 @@ mtk_gdma_attach(device_t dev)
 		return (ENXIO);
 	}
 
+	gdma_sc = sc;
+
 	sc->dev = dev;
 
 	mtk_gdma_alloc(sc);
 
 	mtk_gdma_sysctl(dev);
 
+	GDMA_WRITE(sc, RALINK_GDMA_GCT, 0x01);
+
 	return (0);
+}
+
+int
+mtk_gdma_spi_rx(int size, char *buff)
+{
+	struct mtk_gdma_softc *sc;
+	uint32_t r;
+	int i;
+
+	sc = gdma_sc;
+	r = GDMA_READ(sc, RALINK_GDMA_GCT);
+printf("MORIMORI DMA %d %x\n", size, r);
+
+	GDMA_WRITE(sc, GDMA_SRC_REG(GDMA_SPI_RX), 0x10000b34);
+	GDMA_WRITE(sc, GDMA_DST_REG(GDMA_SPI_RX), sc->gdma_rx_buff_paddr);
+
+	r = (GDMA_SPI_RX << NEXT_UNMASK_CH_OFFSET);
+	r |= (0 << CH_MASK_OFFSET);
+	r |= (1 << COHERENT_INT_EBL_OFFSET);
+	r |= (0 << CH_UNMASKINT_EBL_OFFSET);
+	r |= (DMA_SPI_RX_REQ << SRC_DMA_REQ_OFFSET);
+	r |= (DMA_MEM_REQ << DST_DMA_REQ_OFFSET);
+	GDMA_WRITE(sc, GDMA_CTRL_REG1(GDMA_SPI_RX), r);
+
+	r = size << TRANS_CNT_OFFSET;
+	r |= (FIX_MODE << SRC_BRST_MODE_OFFSET);
+	r |= (INC_MODE << DST_BRST_MODE_OFFSET);
+	r |= (BUSTER_SIZE_4B << BRST_SIZE_OFFSET);
+	r |= (0 << CH_DONEINT_EBL_OFFSET);
+	r |= (0 << MODE_SEL_OFFSET);
+	r |= (1 << CH_EBL_OFFSET);
+	GDMA_WRITE(sc, GDMA_CTRL_REG(GDMA_SPI_RX), r);
+
+	i = 0;
+	while((GDMA_READ(sc, RALINK_GDMA_DONEINT) & (1 << GDMA_SPI_RX)) == 0)
+		{++i;if(i == 1000) break;}; 
+	r = GDMA_READ(sc, 0x2a0);
+printf("%x,",r);
+	r = GDMA_READ(sc, 0x2a4);
+printf("%x,",r);
+	r = GDMA_READ(sc, 0x2a8);
+printf("%x,",r);
+	/* write 1 clear */
+	GDMA_WRITE(sc, RALINK_GDMA_DONEINT, 1 << GDMA_SPI_RX); 
+	r = GDMA_READ(sc, RALINK_GDMA_UNMASKINT);
+printf("MORIMORI UNDMA %x\n",r);
+printf(".\n");
+
+        bus_dmamap_sync(sc->gdma_rx_tag, sc->gdma_rx_map,
+            BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
+
+	for (i = 0;i < size; ++i)
+		buff[i] = sc->gdma_rx_buff[i];
+
+	return 1;
 }
 
 static device_method_t mtk_gdma_methods[] = {
@@ -332,5 +392,4 @@ static driver_t mtk_gdma_driver = {
 };
 static devclass_t mtk_gdma_devclass;
 
-EARLY_DRIVER_MODULE(mtk_gdma, simplebus, mtk_gdma_driver, mtk_gdma_devclass,
-    0, 0, BUS_PASS_INTERRUPT + BUS_PASS_ORDER_EARLY);
+DRIVER_MODULE(mtk_gdma, simplebus, mtk_gdma_driver, mtk_gdma_devclass, 0, 0);
