@@ -3,6 +3,7 @@
  * Copyright (c) 2011, Aleksandr Rybalko <ray@FreeBSD.org>
  * Copyright (c) 2013, Alexander A. Mityaev <sansan@adm.ua>
  * Copyright (c) 2016, Stanislav Galabov <sgalabov@gmail.com>
+ * Copyright (c) 2023, Hiroki Mori
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +41,10 @@
 #define MTK_SPIBUSY0		MTK_SPISTAT0
 
 #define MTK_SPICFG0		0x10
+#define		ADDRMODE		(1<<12)
+#define		RXENVDIS		(1<<11)
+#define		RXCAP			(1<<10)
+#define		SPIENMODE		(1<<9)
 #define		MSBFIRST		(1<<8)
 #define		SPICLKPOL		(1<<6)
 #define		CAPT_ON_CLK_FALL	(1<<5)
@@ -57,6 +62,7 @@
 #define		SPI_CLK_DISABLED	7
 
 #define MTK_SPICTL0		0x14
+#define		STARTSPI		(1<<4)
 #define		HIZSMOSI		(1<<3)
 #define		START_WRITE		(1<<2)
 #define		START_READ		(1<<1)
@@ -68,25 +74,40 @@
 #define MTK_SPIADDR0		0x24
 #define MTK_SPIBS0		0x28
 #define MTK_SPIUSER0		0x2c
-#define 	USER_SINGLE		0x1
-#define 	USER_DUAL		0x2
-#define 	USER_QUAD		0x4
-#define 	USER_NO_DATA		0x0
-#define 	USER_READ_DATA		0x1
-#define 	USER_WRITE_DATA		0x2
-#define 	USER_NO_DUMMY		0x0
-#define 	USER_ONE_DUMMY		0x1
-#define 	USER_TWO_DUMMY		0x2
-#define 	USER_THREE_DUMMY	0x3
-#define 	USER_NO_MODE		0x0
-#define 	USER_ONE_MODE		0x1
+#define		USER_MODE		(1<<21)
+#define		INSER_PHASE_SHIFT	20
+#define 	USER_NO_INSTR		0x0
+#define 	USER_ONE_INSTR		0x1
+
+#define		ADDR_PHASE_SHIFT	17
 #define 	USER_NO_ADDR		0x0
 #define 	USER_ONE_BYTE_ADDR	0x1
 #define 	USER_TWO_BYTE_ADDR	0x2
 #define 	USER_THREE_BYTE_ADDR	0x3
 #define 	USER_FOUR_BYTE_ADDR	0x4
-#define 	USER_NO_INSTRU		0x0
-#define 	USER_ONE_INSTRU		0x1
+
+#define		MODE_PHASE_SHIFT	16
+#define 	USER_NO_MODE		0x0
+#define 	USER_ONE_MODE		0x1
+
+#define		DUMMY_PHASE_SHIFT	14
+#define 	USER_NO_DUMMY		0x0
+#define 	USER_ONE_DUMMY		0x1
+#define 	USER_TWO_DUMMY		0x2
+#define 	USER_THREE_DUMMY	0x3
+
+#define		DATA_PHASE_SHIFT	12
+#define 	USER_NO_DATA		0x0
+#define 	USER_READ_DATA		0x1
+#define 	USER_WRITE_DATA		0x2
+
+#define 	ADDR_TYPE_SHIFT		9
+#define 	MODE_TYPE_SHIFT		6
+#define 	DUMMY_TYPE_SHIFT	3
+#define 	DATA_TYPE_SHIFT		0
+#define 	USER_SINGLE		0x1
+#define 	USER_DUAL		0x2
+#define 	USER_QUAD		0x4
 
 #define MTK_SPITXFIFO0		0x30
 #define MTK_SPIRXFIFO0		0x34

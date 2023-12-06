@@ -2,6 +2,7 @@
  * Copyright (c) 2009, Oleksandr Tymoshenko <gonzo@FreeBSD.org>
  * Copyright (c) 2011, Aleksandr Rybalko <ray@FreeBSD.org>
  * Copyright (c) 2013, Alexander A. Mityaev <sansan@adm.ua>
+ * Copyright (c) 2023, Hiroki Mori
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -116,7 +117,7 @@ mtk_spi_probe(device_t dev)
 	if (ofw_bus_search_compatible(dev, compat_data)->ocd_data == 0)
 		return(ENXIO);
 
-	device_set_desc(dev, "MTK SPI Controller (v1)");
+	device_set_desc(dev, "MTK SPI Controller (v3)");
 
 	return (0);
 }
@@ -239,13 +240,54 @@ mtk_spi_txrx(struct mtk_spi_softc *sc, uint8_t *data, int write)
 }
 
 static int
+mtk_spi_flash(struct mtk_spi_softc *sc, uint32_t mode, uint32_t addr,
+    int alen, uint8_t *buf, int sz, int write)
+{
+	int i, len, count;
+
+	if (write == MTK_SPI_WRITE) {
+	} else {
+		SPI_SET_BITS(sc, MTK_SPICFG0, SPIENMODE | RXENVDIS);
+		SPI_WRITE(sc, MTK_SPIDATA0, CMD_FAST_READ);
+		if (alen == 3)
+			SPI_WRITE(sc, MTK_SPIADDR0, addr << 8);
+		else
+			SPI_WRITE(sc, MTK_SPIADDR0, addr);
+		SPI_WRITE(sc, MTK_SPIMD0, mode << 24);
+		SPI_WRITE(sc, MTK_SPIUSER0, USER_MODE |
+		    (USER_SINGLE << DATA_TYPE_SHIFT) |
+		    (USER_SINGLE << DUMMY_TYPE_SHIFT) |
+		    (USER_SINGLE << MODE_TYPE_SHIFT) |
+		    (USER_SINGLE << ADDR_TYPE_SHIFT) |
+		    (USER_ONE_DUMMY << DUMMY_PHASE_SHIFT) |
+		    (alen == 3 ? (USER_THREE_BYTE_ADDR << ADDR_PHASE_SHIFT) :
+		        (USER_FOUR_BYTE_ADDR << ADDR_PHASE_SHIFT)) |
+		    (USER_ONE_INSTR << INSER_PHASE_SHIFT) |
+		    (USER_READ_DATA << DATA_PHASE_SHIFT));
+		SPI_WRITE(sc, MTK_SPIBS0, sz);
+		SPI_WRITE(sc, MTK_SPICTL0, STARTSPI);
+		for (i = 0;i < sz; ) {
+			do {
+				len = SPI_READ(sc, MTK_SPIFIFOSTAT0) & 0xff;
+			} while (len == 0);
+			for (count = len; count > 0; --count) {
+				buf[i++] = SPI_READ(sc, MTK_SPIRXFIFO0);
+			}
+		}
+		mtk_spi_wait(sc);
+		SPI_CLEAR_BITS(sc, MTK_SPICFG0, SPIENMODE | RXENVDIS);
+	}
+	return (0);
+}
+
+static int
 mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 {
 	struct mtk_spi_softc *sc;
 	uint8_t *buf, byte, *tx_buf;
-	uint32_t cs, clock, mode;
+	uint32_t cs, clock, mode, addr;
 	int i, sz, error = 0, write = 0;
-	int div, clk, cfgreg;
+	int div, clk, cfgreg, alen;
 
 	sc = device_get_softc(dev);
 
@@ -314,6 +356,16 @@ mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 				break;
 			case CMD_READ:
 			case CMD_FAST_READ:
+				if (cmd->tx_cmd_sz == 5) {
+					alen = 3;
+					addr = (tx_buf[1] << 16) |
+					    (tx_buf[2] << 8) | tx_buf[3];
+				} else {
+					alen = 4;
+					addr = (tx_buf[1] << 24) |
+					    (tx_buf[2] << 16) |
+					    (tx_buf[3] << 8) | tx_buf[4];
+				}
 				cmd->rx_cmd_sz = cmd->tx_data_sz = 0;
 				break;
 			case CMD_SECTOR_ERASE:
@@ -326,6 +378,18 @@ mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	}
         
 	mtk_spi_chip_activate(sc);
+
+	if (sc->nonflash == 0 && (tx_buf[0] == CMD_READ ||
+	    tx_buf[0] == CMD_FAST_READ)) {
+		buf = (uint8_t *)cmd->rx_data;
+		sz = cmd->rx_data_sz;
+		error = mtk_spi_flash(sc, mode, addr, alen, buf, sz,
+		    MTK_SPI_READ);
+
+		mtk_spi_chip_deactivate(sc);
+
+		return (error);
+	}
 
 	if (cmd->tx_cmd_sz + cmd->rx_cmd_sz) {
 		buf = (uint8_t *)(cmd->rx_cmd);
@@ -405,4 +469,4 @@ static driver_t mtk_spi_driver = {
 
 static devclass_t mtk_spi_devclass;
 
-DRIVER_MODULE(mtk_spi_v1, simplebus, mtk_spi_driver, mtk_spi_devclass, 0, 0);
+DRIVER_MODULE(mtk_spi_v3, simplebus, mtk_spi_driver, mtk_spi_devclass, 0, 0);
