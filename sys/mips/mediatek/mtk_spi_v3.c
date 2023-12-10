@@ -100,7 +100,7 @@ static void	mtk_spi_chip_activate(struct mtk_spi_softc *);
 static void	mtk_spi_chip_deactivate(struct mtk_spi_softc *);
 static uint8_t	mtk_spi_txrx(struct mtk_spi_softc *, uint8_t *, int);
 static int	mtk_spi_flash(struct mtk_spi_softc *, uint32_t, uint32_t,
-		    int, uint8_t *, int, int);
+		    uint32_t, int, uint8_t *, int, int);
 static int	mtk_spi_transfer(device_t, device_t, struct spi_command *);
 static phandle_t mtk_spi_get_node(device_t, device_t);
 
@@ -242,15 +242,15 @@ mtk_spi_txrx(struct mtk_spi_softc *sc, uint8_t *data, int write)
 }
 
 static int
-mtk_spi_flash(struct mtk_spi_softc *sc, uint32_t mode, uint32_t addr,
-    int alen, uint8_t *buf, int sz, int write)
+mtk_spi_flash(struct mtk_spi_softc *sc, uint32_t cmd, uint32_t mode,
+    uint32_t addr, int alen, uint8_t *buf, int sz, int write)
 {
 	int i, len, count;
 
 	if (write == MTK_SPI_WRITE) {
 	} else {
 		SPI_SET_BITS(sc, MTK_SPICFG0, SPIENMODE | RXENVDIS);
-		SPI_WRITE(sc, MTK_SPIDATA0, CMD_FAST_READ);
+		SPI_WRITE(sc, MTK_SPIDATA0, cmd);
 		if (alen == 3)
 			SPI_WRITE(sc, MTK_SPIADDR0, addr << 8);
 		else
@@ -385,7 +385,7 @@ mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	    tx_buf[0] == CMD_FAST_READ)) {
 		buf = (uint8_t *)cmd->rx_data;
 		sz = cmd->rx_data_sz;
-		error = mtk_spi_flash(sc, mode, addr, alen, buf, sz,
+		error = mtk_spi_flash(sc, tx_buf[0], mode, addr, alen, buf, sz,
 		    MTK_SPI_READ);
 
 		mtk_spi_chip_deactivate(sc);

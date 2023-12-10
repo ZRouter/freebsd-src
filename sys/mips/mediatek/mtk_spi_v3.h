@@ -127,4 +127,6 @@
 #define MTK_SPI_WRITE		1
 #define MTK_SPI_READ		0
 
+#define MTK_SPI_FIFOSIZE	16
+
 #endif /* _MTK_SPIVAR_H_ */
