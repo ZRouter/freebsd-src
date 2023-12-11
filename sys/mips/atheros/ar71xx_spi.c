@@ -52,6 +52,10 @@ __FBSDID("$FreeBSD$");
 #include "spibus_if.h"
 
 #include <mips/atheros/ar71xxreg.h>
+#include <mips/atheros/ar934xreg.h>
+
+#include <mips/atheros/ar71xx_cpudef.h>
+#include <mips/atheros/ar71xx_setup.h>
 
 #undef AR71XX_SPI_DEBUG
 #ifdef AR71XX_SPI_DEBUG
@@ -202,6 +206,71 @@ ar71xx_spi_txrx(struct ar71xx_spi_softc *sc, int cs, uint8_t data)
 	return (rds & 0xff);
 }
 
+uint32_t
+ar71xx_spi_shift(struct ar71xx_spi_softc *sc, uint32_t out, uint32_t ctl)
+{
+	uint32_t in;
+
+	SPI_WRITE(sc, AR934X_SPI_SHIFT_DATAOUT, out);
+
+	SPI_WRITE(sc, AR934X_SPI_SHIFT_CNT, ctl);
+
+	while(SPI_READ(sc, AR934X_SPI_SHIFT_CNT) &
+	    AR934X_SPI_SHIFT_CNT_SHIFT_EN)
+		;
+
+	in = SPI_READ(sc, AR934X_SPI_SHIFT_DATAIN);
+
+	return in;
+}
+
+static int
+ar71xx_spi_shift_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
+    uint8_t *txdata, uint8_t *rxdata)
+{
+	int i, remain;
+	uint32_t shiftctl, shiftin, shiftout;
+
+	if (size >= 4) {
+		for (i = 0; (i + 3) < size; i += 4) {
+			shiftout = *txdata++ << 24;
+			shiftout |= *txdata++ << 16;
+			shiftout |= *txdata++ << 8;
+			shiftout |= *txdata++;
+
+			shiftctl = 32;
+			shiftctl |= AR934X_SPI_SHIFT_CNT_SHIFT_EN;
+			shiftctl |= (AR934X_SPI_SHIFT_CNT_SHIFT_CHNL_0 << cs);
+
+			shiftin = ar71xx_spi_shift(sc, shiftout, shiftctl);
+
+			*rxdata++ = shiftin >> 24;
+			*rxdata++ = (shiftin >> 16) & 0xff;
+			*rxdata++ = (shiftin >> 8) & 0xff;
+			*rxdata++ = shiftin & 0xff;
+		}
+	}
+	remain = size % 4;
+	if (remain) {
+		shiftout = 0;
+		for (i = 0; i < remain; ++i) {
+			shiftout = (shiftout << 8) | *txdata++;
+		}
+
+		shiftctl = remain * 8;
+		shiftctl |= AR934X_SPI_SHIFT_CNT_SHIFT_EN;
+		shiftctl |= (AR934X_SPI_SHIFT_CNT_SHIFT_CHNL_0 << cs);
+
+		shiftin = ar71xx_spi_shift(sc, shiftout, shiftctl);
+
+		for (i = 0; i < remain; ++i) {
+			*rxdata++ = (shiftin >> ((2 - i) * 8)) && 0xff;
+		}
+	}
+
+	return (0);
+}
+
 static int
 ar71xx_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 {
@@ -223,21 +292,44 @@ ar71xx_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	KASSERT(cmd->tx_data_sz == cmd->rx_data_sz, 
 	    ("TX/RX data sizes should be equal"));
 
-	/*
-	 * Transfer command
-	 */
-	buf_out = (uint8_t *)cmd->tx_cmd;
-	buf_in = (uint8_t *)cmd->rx_cmd;
-	for (i = 0; i < cmd->tx_cmd_sz; i++)
-		buf_in[i] = ar71xx_spi_txrx(sc, cs, buf_out[i]);
 
-	/*
-	 * Receive/transmit data (depends on  command)
-	 */
-	buf_out = (uint8_t *)cmd->tx_data;
-	buf_in = (uint8_t *)cmd->rx_data;
-	for (i = 0; i < cmd->tx_data_sz; i++)
-		buf_in[i] = ar71xx_spi_txrx(sc, cs, buf_out[i]);
+	if (ar71xx_soc == AR71XX_SOC_AR9341 ||
+	    ar71xx_soc == AR71XX_SOC_AR9342 ||
+	    ar71xx_soc == AR71XX_SOC_AR9344 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9533 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9533_V2 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9556 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9558) {
+		/*
+		 * Transfer command
+		 */
+		buf_out = (uint8_t *)cmd->tx_cmd;
+		buf_in = (uint8_t *)cmd->rx_cmd;
+		ar71xx_spi_shift_txrx(sc, cs, cmd->tx_cmd_sz, buf_out, buf_in);
+
+		/*
+		 * Receive/transmit data (depends on  command)
+		 */
+		buf_out = (uint8_t *)cmd->tx_data;
+		buf_in = (uint8_t *)cmd->rx_data;
+		ar71xx_spi_shift_txrx(sc, cs, cmd->tx_data_sz, buf_out, buf_in);
+	} else {
+		/*
+		 * Transfer command
+		 */
+		buf_out = (uint8_t *)cmd->tx_cmd;
+		buf_in = (uint8_t *)cmd->rx_cmd;
+		for (i = 0; i < cmd->tx_cmd_sz; i++)
+			buf_in[i] = ar71xx_spi_txrx(sc, cs, buf_out[i]);
+
+		/*
+		 * Receive/transmit data (depends on  command)
+		 */
+		buf_out = (uint8_t *)cmd->tx_data;
+		buf_in = (uint8_t *)cmd->rx_data;
+		for (i = 0; i < cmd->tx_data_sz; i++)
+			buf_in[i] = ar71xx_spi_txrx(sc, cs, buf_out[i]);
+	}
 
 	ar71xx_spi_chip_deactivate(sc, cs);
 
