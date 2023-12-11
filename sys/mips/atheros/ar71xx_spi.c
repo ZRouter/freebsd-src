@@ -263,8 +263,8 @@ ar71xx_spi_shift_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
 
 		shiftin = ar71xx_spi_shift(sc, shiftout, shiftctl);
 
-		for (i = 0; i < remain; ++i) {
-			*rxdata++ = (shiftin >> ((2 - i) * 8)) && 0xff;
+		for (i = remain; i > 0; --i) {
+			*rxdata++ = (shiftin >> ((i - 1) * 8)) && 0xff;
 		}
 	}
 
