@@ -215,10 +215,6 @@ ar71xx_spi_shift(struct ar71xx_spi_softc *sc, uint32_t out, uint32_t ctl)
 
 	SPI_WRITE(sc, AR934X_SPI_SHIFT_CNT, ctl);
 
-	while(SPI_READ(sc, AR934X_SPI_SHIFT_CNT) &
-	    AR934X_SPI_SHIFT_CNT_SHIFT_EN)
-		;
-
 	in = SPI_READ(sc, AR934X_SPI_SHIFT_DATAIN);
 
 	return in;
@@ -264,7 +260,7 @@ ar71xx_spi_shift_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
 		shiftin = ar71xx_spi_shift(sc, shiftout, shiftctl);
 
 		for (i = remain; i > 0; --i) {
-			*rxdata++ = (shiftin >> ((i - 1) * 8)) && 0xff;
+			*rxdata++ = (shiftin >> ((i - 1) * 8)) & 0xff;
 		}
 	}
 
@@ -305,14 +301,18 @@ ar71xx_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 		 */
 		buf_out = (uint8_t *)cmd->tx_cmd;
 		buf_in = (uint8_t *)cmd->rx_cmd;
-		ar71xx_spi_shift_txrx(sc, cs, cmd->tx_cmd_sz, buf_out, buf_in);
+		if (cmd->tx_cmd_sz)
+			ar71xx_spi_shift_txrx(sc, cs, cmd->tx_cmd_sz,
+			    buf_out, buf_in);
 
 		/*
 		 * Receive/transmit data (depends on  command)
 		 */
 		buf_out = (uint8_t *)cmd->tx_data;
 		buf_in = (uint8_t *)cmd->rx_data;
-		ar71xx_spi_shift_txrx(sc, cs, cmd->tx_data_sz, buf_out, buf_in);
+		if (cmd->tx_data_sz)
+			ar71xx_spi_shift_txrx(sc, cs, cmd->tx_data_sz,
+			    buf_out, buf_in);
 	} else {
 		/*
 		 * Transfer command
