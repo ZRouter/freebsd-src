@@ -122,9 +122,6 @@
 			compatible = "ralink,rt3883-gpio", "ralink,rt2880-gpio";
 			reg = <0x638 0x24>;
 
-			interrupt-parent = <&intc>;
-			interrupts = <6>;
-
 			gpio-controller;
 			#gpio-cells = <2>;
 
@@ -140,9 +137,6 @@
 		gpio2: gpio@660 {
 			compatible = "ralink,rt3883-gpio", "ralink,rt2880-gpio";
 			reg = <0x660 0x24>;
-
-			interrupt-parent = <&intc>;
-			interrupts = <6>;
 
 			gpio-controller;
 			#gpio-cells = <2>;
