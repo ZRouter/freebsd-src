@@ -98,7 +98,7 @@ static int	mtk_spi_detach(device_t);
 static int	mtk_spi_wait(struct mtk_spi_softc *);
 static void	mtk_spi_chip_activate(struct mtk_spi_softc *);
 static void	mtk_spi_chip_deactivate(struct mtk_spi_softc *);
-static uint8_t	mtk_spi_txrx(struct mtk_spi_softc *, uint8_t *, int);
+static int	mtk_spi_txrx(struct mtk_spi_softc *, uint8_t *, int);
 static int	mtk_spi_flash(struct mtk_spi_softc *, uint32_t, uint32_t,
 		    uint32_t, int, uint8_t *, int, int);
 static int	mtk_spi_transfer(device_t, device_t, struct spi_command *);
@@ -221,7 +221,7 @@ mtk_spi_wait(struct mtk_spi_softc *sc)
 	return (0);
 }
 
-static uint8_t
+static int
 mtk_spi_txrx(struct mtk_spi_softc *sc, uint8_t *data, int write)
 {
 
