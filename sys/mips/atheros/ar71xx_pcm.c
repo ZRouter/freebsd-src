@@ -43,6 +43,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/mutex.h>
 #include <sys/resource.h>
 #include <sys/rman.h>
+#include <sys/sysctl.h>
 
 #include <machine/bus.h>
 
@@ -344,6 +345,10 @@ ar71xx_pcm_start(struct sc_pcminfo *scp)
 	reg = PCM_READ(sc, AR71XX_STEREO0_CONFIG);
 	reg = reg & ~0xf;
 	reg = reg | ar934x_pcm_posedge(sc->sr->speed);
+	if (sc->bclk64fs != 0)
+		reg = reg | (1 << 11);
+	else
+		reg = reg & ~(1 << 11);
 	PCM_WRITE(sc, AR71XX_STEREO0_CONFIG, reg);
 
 	ATH_WRITE_REG(AR71XX_RST_RESET, (1 << 1));
@@ -687,6 +692,12 @@ ar71xx_pcm_attach(device_t dev)
 #if 0
 	mixer_init(dev, &ar71xx_pcmmixer_class, scp);
 #endif
+
+	/* Create device sysctl node. */
+	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    OID_AUTO, "bclk64fs", CTLFLAG_RW, &sc->bclk64fs, 0,
+	    "I2S bit clock is 64fs");
 
 	return (0);
 }
