@@ -349,6 +349,10 @@ ar71xx_pcm_start(struct sc_pcminfo *scp)
 		reg = reg | (1 << 11);
 	else
 		reg = reg & ~(1 << 11);
+	if (sc->spdif != 0)
+		reg = reg | (1 << 23);
+	else
+		reg = reg & ~(1 << 23);
 	PCM_WRITE(sc, AR71XX_STEREO0_CONFIG, reg);
 
 	ATH_WRITE_REG(AR71XX_RST_RESET, (1 << 1));
@@ -594,7 +598,7 @@ ar71xx_pcm_configure(struct ar71xx_pcm_softc *sc)
 	int reg;
 
 //	reg = PCM_READ(sc, AR71XX_STEREO0_CONFIG);
-	reg = (1 << 23) | (1 << 21) | (1 << 12) | (1 << 9) | (1 << 8);
+	reg = (1 << 21) | (1 << 12) | (1 << 9) | (1 << 8);
 	PCM_WRITE(sc, AR71XX_STEREO0_CONFIG, reg);
 
 	return (0);
@@ -697,6 +701,10 @@ ar71xx_pcm_attach(device_t dev)
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 	    OID_AUTO, "bclk64fs", CTLFLAG_RW, &sc->bclk64fs, 0,
 	    "I2S bit clock is 64fs");
+	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
+	    OID_AUTO, "spdif", CTLFLAG_RW, &sc->spdif, 0,
+	    "Enable SPDIF");
 
 	return (0);
 }

@@ -115,6 +115,7 @@ struct ar71xx_pcm_softc {
 	int			dma_size;
 	struct ar71xx_pcm_rate		*sr;
 	int			bclk64fs;
+	int			spdif;
 };
 
 /* Channel registers */
