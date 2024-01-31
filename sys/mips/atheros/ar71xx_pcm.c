@@ -621,7 +621,6 @@ ar71xx_pcm_attach(device_t dev)
 	sc = malloc(sizeof(*sc), M_DEVBUF, M_WAITOK | M_ZERO);
 	sc->dev = dev;
 	sc->pos = 0;
-	sc->internal_codec = 1;
 
 	/* Setup sound subsystem */
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "ar71xx_pcm softc");

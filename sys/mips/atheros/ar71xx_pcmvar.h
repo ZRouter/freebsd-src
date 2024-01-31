@@ -114,7 +114,6 @@ struct ar71xx_pcm_softc {
 	uintptr_t		ar71xx_pcm_fifo_paddr;
 	int			dma_size;
 	struct ar71xx_pcm_rate		*sr;
-	int			internal_codec;
 	int			bclk64fs;
 };
 
