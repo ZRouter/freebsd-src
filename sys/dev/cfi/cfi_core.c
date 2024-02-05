@@ -540,6 +540,7 @@ cfi_wait_ready(struct cfi_softc *sc, u_int ofs, sbintime_t start,
 			break;
 		case CFI_VEND_AMD_SCS:
 		case CFI_VEND_AMD_ECS:
+			DELAY(10);
 			st0 = cfi_read(sc, ofs);
 			st = cfi_read(sc, ofs);
 			done = ((st & 0x40) == (st0 & 0x40)) ? 1 : 0;
@@ -618,6 +619,9 @@ cfi_write_block(struct cfi_softc *sc)
 			cfi_amd_write(sc, sc->sc_wrofs, AMD_ADDR_START,
 			    CFI_AMD_ERASE_SECTOR);
 			cfi_amd_write(sc, sc->sc_wrofs, 0, CFI_AMD_BLOCK_ERASE);
+			DELAY(1000);
+			while((cfi_read(sc, sc->sc_wrofs) & 0x80) != 0x80)
+				DELAY(10);
 			break;
 		default:
 			/* Better safe than sorry... */
