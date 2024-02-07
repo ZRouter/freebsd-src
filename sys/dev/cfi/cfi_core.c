@@ -297,7 +297,7 @@ cfi_probe(device_t dev)
 	if (error)
 		goto out;
 
-	snprintf(desc, sizeof(desc), "%s - %s : %x", vend_str,
+	snprintf(desc, sizeof(desc), "%s - %s:ID 0x%06x", vend_str,
 	    cfi_fmtsize(sc->sc_size) , cfi_read_id(sc));
 	device_set_desc_copy(dev, desc);
 
