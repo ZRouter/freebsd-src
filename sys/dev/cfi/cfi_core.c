@@ -158,6 +158,20 @@ cfi_reset_default(struct cfi_softc *sc)
 	cfi_write(sc, 0, CFI_BCS_READ_ARRAY);
 }
 
+uint32_t
+cfi_read_id(struct cfi_softc *sc)
+{
+	uint32_t val;
+
+	cfi_write(sc, 0x555 * sc->sc_width, 0xaa);
+	cfi_write(sc, 0x2aa * sc->sc_width, 0x55);
+	cfi_write(sc, 0x555 * sc->sc_width, 0x90);
+	val = cfi_read(sc, 0) << 16;
+	val |= cfi_read(sc, 1 * sc->sc_width);
+	cfi_reset_default(sc);
+	return (val);
+}
+
 uint8_t
 cfi_read_qry(struct cfi_softc *sc, u_int ofs)
 {
@@ -283,8 +297,8 @@ cfi_probe(device_t dev)
 	if (error)
 		goto out;
 
-	snprintf(desc, sizeof(desc), "%s - %s", vend_str,
-	    cfi_fmtsize(sc->sc_size));
+	snprintf(desc, sizeof(desc), "%s - %s : %x", vend_str,
+	    cfi_fmtsize(sc->sc_size) , cfi_read_id(sc));
 	device_set_desc_copy(dev, desc);
 
  out:
