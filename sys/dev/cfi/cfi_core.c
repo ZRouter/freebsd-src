@@ -297,8 +297,8 @@ cfi_probe(device_t dev)
 	if (error)
 		goto out;
 
-	snprintf(desc, sizeof(desc), "%s - %s:ID 0x%06x", vend_str,
-	    cfi_fmtsize(sc->sc_size) , cfi_read_id(sc));
+	snprintf(desc, sizeof(desc), "%s - %s", vend_str,
+	    cfi_fmtsize(sc->sc_size));
 	device_set_desc_copy(dev, desc);
 
  out:
@@ -427,7 +427,7 @@ cfi_attach(device_t dev)
 	cfi_write(sc, 0, CFI_BCS_CLEAR_STATUS);
 
 	if (bootverbose) {
-		device_printf(dev, "[");
+		device_printf(dev, "ID 0x%06x [", cfi_read_id(sc));
 		for (r = 0; r < sc->sc_regions; r++) {
 			printf("%ux%s%s", sc->sc_region[r].r_blocks,
 			    cfi_fmtsize(sc->sc_region[r].r_blksz),
