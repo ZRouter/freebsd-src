@@ -226,6 +226,7 @@ robosw_attach(device_t dev)
 	{
 		device_printf(dev, "VLAN settings...\n");
 		sc->info.es_vlan_caps |= ETHERSWITCH_VLAN_DOT1Q;
+#if 0
 		/* Enable VLAN support and set defaults */
 		sc->hal.api.vlan_enable_1q(sc, 1);
 		sc->vlan_mode = ETHERSWITCH_VLAN_DOT1Q;
@@ -240,6 +241,7 @@ robosw_attach(device_t dev)
 		for (i = 0; i < sc->info.es_nports; i++)
 			/* set PVID to default value */
 			sc->hal.api.vlan_set_pvid(sc, i, ROBOSW_DEF_VLANID);
+#endif
 	}
 
 	if ((sc->info.es_vlan_caps & (ETHERSWITCH_VLAN_PORT | ETHERSWITCH_VLAN_DOT1Q)) == 0)
