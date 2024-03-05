@@ -632,7 +632,7 @@ bgmac_if_ioctl(if_t ifp, u_long command, caddr_t data)
 			{
 				/* TODO: add detach */
 				bgmac_if_init_locked(sc);
-				bgmac_chip_start_txrx(sc);
+//				bgmac_chip_start_txrx(sc);
 			}
 		} else if (ifp->if_drv_flags & IFF_DRV_RUNNING)
 			bgmac_chip_stop_txrx(sc);
