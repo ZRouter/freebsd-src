@@ -140,10 +140,11 @@ static void	bgmac_if_mediastatus(struct ifnet *ifp, struct ifmediareq *ifmr);
 void
 bgmac_print_debug(struct bgmac_softc* sc)
 {
-
+#if 0
 	BGMACDUMP(sc);
 	BGMACDUMPMIB(sc);
 	BGMACDUMPERRORS(sc);
+#endif
 }
 
 static int
@@ -601,6 +602,8 @@ bgmac_if_init_locked(struct bgmac_softc *sc)
 	/* set number of interrupts per frame */
 	bus_write_4(sc->mem, BGMAC_REG_INTR_RECV_LAZY,
 	    1 << BGMAC_REG_INTR_RECV_LAZY_FC_SHIFT);
+
+	bgmac_chip_start_txrx(sc);
 
 	bgmac_chip_set_intr_mask(sc, I_ERR | I_OR);
 
