@@ -226,9 +226,14 @@ NESTED(cpu_switch, CALLFRAME_SIZ, ra)
 	SAVE_U_PCB_CONTEXT(t0, PCB_REG_SR, a0)		# save status register
 	SAVE_U_PCB_CONTEXT(gp, PCB_REG_GP, a0)
 #ifdef MIPS_DSP_SUPPORT
+	lw	t2, TD_MDFLAGS(a3)		# get md_flags
+	and	t1, t2, MDTD_DSPUSED
+	beqz	t1, dsp_untouched
+	nop
 	/* save dsp registor to pcb */
 	jal	dsp_save
 	nop
+dsp_untouched:
 #endif
 	jal	getpc
 	nop
