@@ -371,6 +371,17 @@ sw2:
 /*
  * Restore registers and return.
  */
+#ifdef MIPS_DSP_SUPPORT
+	move	a0, s0
+	RESTORE_U_PCB_CONTEXT(t0, PCB_REG_SR, a0)	# restore kernel context
+	and	t0, t0, MIPS_SR_MX
+	beqz	t0, dsp_uerestore
+	nop
+
+	jal	dsp_restore
+	nop
+dsp_uerestore:
+#endif
 	move	a0, s0
 	move	a1, s7
 	RESTORE_U_PCB_CONTEXT(gp, PCB_REG_GP, a0)
