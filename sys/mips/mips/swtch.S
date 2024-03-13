@@ -373,7 +373,7 @@ sw2:
  */
 #ifdef MIPS_DSP_SUPPORT
 	move	a0, s0
-	RESTORE_U_PCB_CONTEXT(t0, PCB_REG_SR, a0)	# restore kernel context
+	RESTORE_U_PCB_CONTEXT(t0, PCB_REG_SR, a0)	# check kernel context
 	and	t0, t0, MIPS_SR_MX
 	beqz	t0, dsp_uerestore
 	nop
