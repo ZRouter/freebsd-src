@@ -216,6 +216,10 @@ cpu_startup(void *dummy)
 	    ptoa((uintmax_t)vm_free_count()) / 1048576);
 	cpu_init_interrupts();
 
+#ifdef MIPS_DSP_SUPPORT
+	printf("MIPS DSP ASE supported\n");
+#endif
+
 	/*
 	 * Set up buffers, so they can be used to read disk labels.
 	 */
