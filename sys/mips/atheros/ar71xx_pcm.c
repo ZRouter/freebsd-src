@@ -699,7 +699,7 @@ ar71xx_pcm_attach(device_t dev)
 	/* Create device sysctl node. */
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    OID_AUTO, "bclk64fs", CTLFLAG_RW, &sc->bclk64fs, 0,
+	    OID_AUTO, "bclk64fs", CTLFLAG_RW, &sc->bclk64fs, 1,
 	    "I2S bit clock is 64fs");
 	SYSCTL_ADD_INT(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
