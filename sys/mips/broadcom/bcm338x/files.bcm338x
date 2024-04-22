@@ -1,0 +1,10 @@
+# $FreeBSD$
+
+mips/broadcom/bcm338x/bcm338x_machdep.c		standard
+mips/broadcom/bcm338x/obio.c			standard
+
+mips/mips/tick.c				standard
+
+mips/broadcom/bcm338x/uart_dev_bcm338x.c	optional uart_bcm338x
+mips/broadcom/bcm338x/uart_cpu_bcm338x.c	optional uart_bcm338x
+
