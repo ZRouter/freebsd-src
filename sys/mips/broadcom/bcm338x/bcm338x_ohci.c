@@ -1,6 +1,3 @@
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*-
  * Copyright (c) 2015 Stanislav Galabov. All rights reserved.
  * Copyright (c) 2010,2011 Aleksandr Rybalko. All rights reserved.
@@ -27,6 +24,9 @@ __FBSDID("$FreeBSD$");
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD$");
 
 #include <sys/stdint.h>
 #include <sys/stddef.h>

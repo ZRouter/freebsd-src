@@ -121,21 +121,13 @@ bcm338x_spi_attach(device_t dev)
 	}
 
 	device_add_child(dev, "spibus", -1);
+
 	bcm338x_spi_attach_sysctl(dev);
 
 	return (bus_generic_attach(dev));
 }
 
-static void
-bcm338x_spi_chip_activate(struct bcm338x_spi_softc *sc, int cs)
-{
-}
-
-static void
-bcm338x_spi_chip_deactivate(struct bcm338x_spi_softc *sc, int cs)
-{
-}
-
+#ifdef NOTUSE
 static void
 bcm338x_spi_read(struct bcm338x_spi_softc *sc, unsigned char *pRxBuf,
     int prependcnt, int nbytes, int devId)
@@ -159,6 +151,7 @@ bcm338x_spi_read(struct bcm338x_spi_softc *sc, unsigned char *pRxBuf,
 	    0 << HS_SPI_PROFILE_NUM | 0 << HS_SPI_TRIGGER_NUM |
 	    HS_SPI_COMMAND_START_NOW << HS_SPI_COMMAND_VALUE);
 }
+#endif
 
 static void
 bcm338x_spi_write(struct bcm338x_spi_softc *sc, unsigned char *pTxBuf,
@@ -188,16 +181,6 @@ bcm338x_spi_write(struct bcm338x_spi_softc *sc, unsigned char *pTxBuf,
 	    HS_SPI_COMMAND_START_NOW << HS_SPI_COMMAND_VALUE);
 }
 
-static void
-bcm338x_spi_trans_end(struct bcm338x_spi_softc *sc, unsigned char *rxBuf,
-    int nbytes)
-{
-	int i;
-
-	for (i = 0; i < nbytes; ++i)
-		rxBuf[i] = SPI_READ8(sc, PINGPONGFIFOREGS + i);
-}
-
 static int
 bcm338x_spi_trans_poll(struct bcm338x_spi_softc *sc)
 {
@@ -212,6 +195,17 @@ bcm338x_spi_trans_poll(struct bcm338x_spi_softc *sc)
 
 	return 1;
 }
+
+static void
+bcm338x_spi_trans_end(struct bcm338x_spi_softc *sc, unsigned char *rxBuf,
+    int nbytes)
+{
+	int i;
+
+	for (i = 0; i < nbytes; ++i)
+		rxBuf[i] = SPI_READ8(sc, PINGPONGFIFOREGS + i);
+}
+
 static void
 bcm338x_spi_set_clock(struct bcm338x_spi_softc *sc, int clockHz)
 {
@@ -230,7 +224,7 @@ bcm338x_spi_set_clock(struct bcm338x_spi_softc *sc, int clockHz)
 }
 
 static int
-bcm338x_spi_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
+bcm338x_spi_fifo_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
     uint8_t *txdata, uint8_t *rxdata)
 {
 	bcm338x_spi_set_clock(sc, 1000 * 1000);
@@ -258,7 +252,7 @@ bcm338x_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	buf_out = (uint8_t *)cmd->tx_cmd;
 	buf_in = (uint8_t *)cmd->rx_cmd;
 	if (cmd->tx_cmd_sz)
-		bcm338x_spi_txrx(sc, cs, cmd->tx_cmd_sz,
+		bcm338x_spi_fifo_txrx(sc, cs, cmd->tx_cmd_sz,
 		    buf_out, buf_in);
 
 	/*
@@ -267,7 +261,7 @@ bcm338x_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 	buf_out = (uint8_t *)cmd->tx_data;
 	buf_in = (uint8_t *)cmd->rx_data;
 	if (cmd->tx_data_sz)
-		bcm338x_spi_txrx(sc, cs, cmd->tx_data_sz,
+		bcm338x_spi_fifo_txrx(sc, cs, cmd->tx_data_sz,
 		    buf_out, buf_in);
 	/*
 	 * Close SPI controller interface, restore flash memory mapped access.
