@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2013 Hiroki Mori
+ * Copyright (c) 2024 Hiroki Mori
  * Copyright (c) 2013 Adrian Chadd <adrian@FreeBSD.org>
  * All rights reserved.
  *

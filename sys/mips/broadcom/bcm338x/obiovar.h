@@ -31,8 +31,8 @@
 #define _OBIOVAR_H_
 
 #define	OBIO_IRQ_BASE		0
-#define	OBIO_IRQ_END		127
-#define	OBIO_NIRQS		128
+#define	OBIO_IRQ_END		31
+#define	OBIO_NIRQS		32
 
 struct obio_pic_irqsrc {
 	struct intr_irqsrc	isrc;

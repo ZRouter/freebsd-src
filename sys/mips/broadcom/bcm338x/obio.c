@@ -59,7 +59,7 @@ __FBSDID("$FreeBSD$");
 //#include <mips/atheros/ar531x/ar5312reg.h>
 #include <mips/atheros/ar531x/ar5315_setup.h>
 
-#ifdef AR531X_OBIO_DEBUG
+#ifdef BCM338X_OBIO_DEBUG
 #define dprintf printf
 #else 
 #define dprintf(x, arg...)
@@ -149,6 +149,7 @@ obio_attach(device_t dev)
 	struct obio_softc *sc = device_get_softc(dev);
 	intptr_t xref = pic_xref(dev);
 	int picirq;
+	int i, j;
 
 	sc->obio_dev = dev;
 
@@ -156,8 +157,7 @@ obio_attach(device_t dev)
 	sc->obio_mem_rman.rm_descr = "OBIO memory window";
 
 	if (rman_init(&sc->obio_mem_rman) != 0 ||
-	    rman_manage_region(&sc->obio_mem_rman, BCM3383_INTC_BASE,
-	    0x100 - 1) != 0)
+	    rman_manage_region(&sc->obio_mem_rman, 0x12000000, 0x15ffffff) != 0)
 		panic("obio_attach: failed to set up memory rman");
 
 	sc->obio_irq_rman.rm_type = RMAN_ARRAY;
@@ -191,6 +191,22 @@ obio_attach(device_t dev)
 //	BCM_WRITE_REG(AR5315_SYSREG_BASE
 //		+ AR5315_SYSREG_MISC_INTMASK, 0);
 
+	/* USB init */
+	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
+	    BCM_READ_REG(BCM3383_INTC_BASE + 0x0c));
+	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x04, (1 << 7) |
+	    BCM_READ_REG(BCM3383_INTC_BASE + 0x04));
+
+	BCM_WRITE_REG(BCM3383_USBCTL_BASE, (1 << 6) |
+	    BCM_READ_REG(BCM3383_USBCTL_BASE));
+	for (i = 0; i < 1000; ++i) ;
+	BCM_WRITE_REG(BCM3383_USBCTL_BASE, ~(1 << 6) &
+	    BCM_READ_REG(BCM3383_USBCTL_BASE));
+	BCM_WRITE_REG(BCM3383_USBCTL_BASE, (1 << 4) |
+	    BCM_READ_REG(BCM3383_USBCTL_BASE));
+	BCM_WRITE_REG(BCM3383_USBCTL_BASE + 0xc, 9 |
+	    BCM_READ_REG(BCM3383_USBCTL_BASE + 0xc));
+
 	device_printf(dev, "Broadcom CHIP ID: %x\n",
 	    BCM_READ_REG(BCM3383_INTC_BASE));
 	// Timer intr test
@@ -204,14 +220,12 @@ obio_attach(device_t dev)
 	/* Start Timer */
 	BCM_WRITE_REG(BCM3383_TIMER_BASE + 0x04, (1 << 31) | 0xffffff);
 
-	int i, j;
-	for (i = 0; i < 0xfffffff; ++i)
-		j = j + 1;
 	for (i = 0; i < 16 ; ++i) {
 		printf("%08x ", i * 0x10);
 		for (j = 0; j < 4 ; ++j) {
 			printf("%08x ",
 			    BCM_READ_REG(BCM3383_INTC_BASE + i * 0x10 + j * 4));
+//			    BCM_READ_REG(BCM3383_EHCI_BASE + i * 0x10 + j * 4));
 		}
 		printf("\n");
 	}
@@ -228,7 +242,7 @@ obio_alloc_resource(device_t bus, device_t child, int type, int *rid,
     rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
 	struct obio_softc		*sc = device_get_softc(bus);
-	struct obio_ivar			*ivar = device_get_ivars(child);
+	struct obio_ivar		*ivar = device_get_ivars(child);
 	struct resource			*rv;
 	struct resource_list_entry	*rle;
 	struct rman			*rm;
