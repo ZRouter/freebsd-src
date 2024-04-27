@@ -78,7 +78,6 @@ __FBSDID("$FreeBSD$");
 struct bcm338x_spi_softc {
 	device_t		sc_dev;
 	struct resource		*sc_mem_res;
-	uint32_t		sc_reg_ctrl;
 	uint32_t		sc_debug;
 };
 
@@ -127,7 +126,6 @@ bcm338x_spi_attach(device_t dev)
 	return (bus_generic_attach(dev));
 }
 
-#ifdef NOTUSE
 static void
 bcm338x_spi_read(struct bcm338x_spi_softc *sc, unsigned char *pRxBuf,
     int prependcnt, int nbytes, int devId)
@@ -151,7 +149,6 @@ bcm338x_spi_read(struct bcm338x_spi_softc *sc, unsigned char *pRxBuf,
 	    0 << HS_SPI_PROFILE_NUM | 0 << HS_SPI_TRIGGER_NUM |
 	    HS_SPI_COMMAND_START_NOW << HS_SPI_COMMAND_VALUE);
 }
-#endif
 
 static void
 bcm338x_spi_write(struct bcm338x_spi_softc *sc, unsigned char *pTxBuf,
@@ -192,8 +189,9 @@ bcm338x_spi_trans_poll(struct bcm338x_spi_softc *sc)
 			return 1;
 		DELAY(1);
 	}
+	device_printf(sc->sc_dev, "SPI Translation time out\n");
 
-	return 1;
+	return 0;
 }
 
 static void
@@ -227,8 +225,20 @@ static int
 bcm338x_spi_fifo_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
     uint8_t *txdata, uint8_t *rxdata)
 {
-	bcm338x_spi_set_clock(sc, 1000 * 1000);
+	bcm338x_spi_set_clock(sc, 781000);
 	bcm338x_spi_write(sc, txdata, size, cs, BCM_SPI_FULL);
+	if(bcm338x_spi_trans_poll(sc)) {
+		bcm338x_spi_trans_end(sc, rxdata, size);
+	}
+	return (0);
+}
+
+static int
+bcm338x_spi_fifo_txrx2(struct ar71xx_spi_softc *sc, int cs, int cmdsize,
+    int size, uint8_t *txdata, uint8_t *rxdata)
+{
+	bcm338x_spi_set_clock(sc, 781000);
+	bcm338x_spi_read(sc, txdata, cmdsize, size, cs);
 	if(bcm338x_spi_trans_poll(sc)) {
 		bcm338x_spi_trans_end(sc, rxdata, size);
 	}
@@ -240,29 +250,31 @@ bcm338x_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 {
 	struct bcm338x_spi_softc *sc;
 	uint8_t *buf_in, *buf_out;
+	uint8_t *cmd_out;
 	uint32_t cs;
+	int i;
 
 	sc = device_get_softc(dev);
 
 	spibus_get_cs(child, &cs);
 
-	/*
-	 * Transfer command
-	 */
-	buf_out = (uint8_t *)cmd->tx_cmd;
-	buf_in = (uint8_t *)cmd->rx_cmd;
-	if (cmd->tx_cmd_sz)
+	if (cmd->tx_data_sz == 0) {
+		/*
+		 * Transfer command
+		 */
+		buf_out = (uint8_t *)cmd->tx_cmd;
+		buf_in = (uint8_t *)cmd->rx_cmd;
 		bcm338x_spi_fifo_txrx(sc, cs, cmd->tx_cmd_sz,
 		    buf_out, buf_in);
-
-	/*
-	 * Receive/transmit data (depends on  command)
-	 */
-	buf_out = (uint8_t *)cmd->tx_data;
-	buf_in = (uint8_t *)cmd->rx_data;
-	if (cmd->tx_data_sz)
-		bcm338x_spi_fifo_txrx(sc, cs, cmd->tx_data_sz,
+	} else {
+		/*
+		 * Receive/transmit data (with command)
+		 */
+		buf_out = (uint8_t *)cmd->tx_cmd;
+		buf_in = (uint8_t *)cmd->rx_data;
+		bcm338x_spi_fifo_txrx2(sc, cs, cmd->tx_cmd_sz, cmd->tx_data_sz,
 		    buf_out, buf_in);
+	}
 	/*
 	 * Close SPI controller interface, restore flash memory mapped access.
 	 */
