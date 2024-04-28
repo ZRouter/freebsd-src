@@ -13,3 +13,4 @@ mips/broadcom/bcm338x/bcm338x_ehci.c		optional ehci
 mips/broadcom/bcm338x/bcm338x_ohci.c		optional ohci
 
 mips/broadcom/bcm338x/bcm338x_spi.c		standard
+mips/broadcom/bcm338x/bcm338x_gpio.c		optional gpio
