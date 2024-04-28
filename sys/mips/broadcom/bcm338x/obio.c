@@ -191,7 +191,7 @@ obio_attach(device_t dev)
 //	BCM_WRITE_REG(AR5315_SYSREG_BASE
 //		+ AR5315_SYSREG_MISC_INTMASK, 0);
 
-	/* USB init */
+	/* USB init refer bcm93383-platform-devs.c brcm_chip_usb_init() */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
 	    BCM_READ_REG(BCM3383_INTC_BASE + 0x0c));
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x04, (1 << 7) |
