@@ -7,6 +7,7 @@ mips/mips/tick.c				standard
 
 mips/broadcom/bcm338x/uart_dev_bcm338x.c	optional uart_bcm338x
 mips/broadcom/bcm338x/uart_cpu_bcm338x.c	optional uart_bcm338x
+mips/broadcom/bcm338x/uart_bus_bcm338x.c	optional uart_bcm338x
 
 mips/broadcom/bcm338x/bcm338x_ehci.c		optional ehci
 mips/broadcom/bcm338x/bcm338x_ohci.c		optional ohci

@@ -327,16 +327,16 @@ static kobj_method_t bcm338x_methods[] = {
 	KOBJMETHOD(uart_attach,		bcm338x_bus_attach),
 	KOBJMETHOD(uart_detach,		bcm338x_bus_detach),
 	KOBJMETHOD(uart_flush,		bcm338x_bus_flush),
-	KOBJMETHOD(uart_getsig,		bcm338x_bus_getsig),
+//	KOBJMETHOD(uart_getsig,		bcm338x_bus_getsig),
 	KOBJMETHOD(uart_ioctl,		bcm338x_bus_ioctl),
 	KOBJMETHOD(uart_ipend,		bcm338x_bus_ipend),
 	KOBJMETHOD(uart_param,		bcm338x_bus_param),
 	KOBJMETHOD(uart_probe,		bcm338x_bus_probe),
 	KOBJMETHOD(uart_receive,	bcm338x_bus_receive),
-	KOBJMETHOD(uart_setsig,		bcm338x_bus_setsig),
+//	KOBJMETHOD(uart_setsig,		bcm338x_bus_setsig),
 	KOBJMETHOD(uart_transmit,	bcm338x_bus_transmit),
-	KOBJMETHOD(uart_grab,		bcm338x_bus_grab),
-	KOBJMETHOD(uart_ungrab,		bcm338x_bus_ungrab),
+//	KOBJMETHOD(uart_grab,		bcm338x_bus_grab),
+//	KOBJMETHOD(uart_ungrab,		bcm338x_bus_ungrab),
 	{ 0, 0 }
 };
 
@@ -365,6 +365,7 @@ bcm338x_bus_attach(struct uart_softc *sc)
 	uint32_t reg;
 
 	/* XXX TODO: flush transmitter */
+#if 0
 
 	/*
 	 * Setup initial interrupt notifications.
@@ -382,6 +383,7 @@ bcm338x_bus_attach(struct uart_softc *sc)
 	reg = bcm338x_getreg(bas, AR933X_UART_CS_REG);
 	reg |= AR933X_UART_CS_HOST_INT_EN;
 	bcm338x_setreg(bas, AR933X_UART_CS_REG, reg);
+#endif
 
 	return (0);
 }
@@ -411,7 +413,7 @@ bcm338x_bus_flush(struct uart_softc *sc, int what)
 
 	bas = &sc->sc_bas;
 	uart_lock(sc->sc_hwmtx);
-	bcm338x_drain(bas, what);
+//	bcm338x_drain(bas, what);
 	uart_unlock(sc->sc_hwmtx);
 
 	return (0);
@@ -562,6 +564,7 @@ bcm338x_bus_probe(struct uart_softc *sc)
 	int error;
 
 	bas = &sc->sc_bas;
+#if 0
 
 	error = bcm338x_probe(bas);
 	if (error)
@@ -574,6 +577,7 @@ bcm338x_bus_probe(struct uart_softc *sc)
 	sc->sc_rxfifosz = 16;
 	sc->sc_txfifosz = 16;
 
+#endif
 	return (0);
 }
 

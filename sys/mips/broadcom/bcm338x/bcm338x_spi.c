@@ -200,8 +200,18 @@ bcm338x_spi_trans_end(struct bcm338x_spi_softc *sc, unsigned char *rxBuf,
 {
 	int i;
 
-	for (i = 0; i < nbytes; ++i)
+	i = 0;
+	while (nbytes > 4) {
+		*((uint32_t *)rxBuf + i / 4) = SPI_READ32(sc, PINGPONGFIFOREGS
+		    + i);
+		i += 4;
+		nbytes -= 4;
+	}
+	while (nbytes > 0) {
 		rxBuf[i] = SPI_READ8(sc, PINGPONGFIFOREGS + i);
+		++i;
+		--nbytes;
+	}
 }
 
 static void
@@ -225,7 +235,7 @@ static int
 bcm338x_spi_fifo_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
     uint8_t *txdata, uint8_t *rxdata)
 {
-	bcm338x_spi_set_clock(sc, 781000);
+	bcm338x_spi_set_clock(sc, 25000000);
 	bcm338x_spi_write(sc, txdata, size, cs, BCM_SPI_FULL);
 	if(bcm338x_spi_trans_poll(sc)) {
 		bcm338x_spi_trans_end(sc, rxdata, size);
@@ -237,11 +247,29 @@ static int
 bcm338x_spi_fifo_txrx2(struct ar71xx_spi_softc *sc, int cs, int cmdsize,
     int size, uint8_t *txdata, uint8_t *rxdata)
 {
-	bcm338x_spi_set_clock(sc, 781000);
+	bcm338x_spi_set_clock(sc, 25000000);
 	bcm338x_spi_read(sc, txdata, cmdsize, size, cs);
 	if(bcm338x_spi_trans_poll(sc)) {
 		bcm338x_spi_trans_end(sc, rxdata, size);
 	}
+#if 0
+	/* check diff at
+	 * hd -v Humax_HG100R.psimage | sed 's/ |.*//' | grep ^002200
+	 */
+	int i, j, o;
+	o = txdata[1] << 16 | txdata[2] << 8 | txdata[3];
+	o -= 0x10000;
+	for (i = 0;i < 32; ++i)
+	{
+		printf("%08x  ", o + i * 16);
+		for (j = 0;j < 16; ++j) {
+			printf("%02x ", rxdata[i * 16 + j]);
+			if (j == 7)
+				printf(" ");
+		}
+		printf("\n");
+	}
+#endif
 	return (0);
 }
 

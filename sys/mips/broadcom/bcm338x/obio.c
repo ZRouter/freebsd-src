@@ -209,6 +209,7 @@ obio_attach(device_t dev)
 
 	device_printf(dev, "Broadcom CHIP ID: %x\n",
 	    BCM_READ_REG(BCM3383_INTC_BASE));
+#if 0
 	// Timer intr test
 	int reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), reg | 1);
@@ -229,6 +230,7 @@ obio_attach(device_t dev)
 		}
 		printf("\n");
 	}
+#endif
 
 	bus_generic_probe(dev);
 	bus_enumerate_hinted_children(dev);
