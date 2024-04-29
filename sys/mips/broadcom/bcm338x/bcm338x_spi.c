@@ -200,18 +200,8 @@ bcm338x_spi_trans_end(struct bcm338x_spi_softc *sc, unsigned char *rxBuf,
 {
 	int i;
 
-	i = 0;
-	while (nbytes > 4) {
-		*((uint32_t *)rxBuf + i / 4) = SPI_READ32(sc, PINGPONGFIFOREGS
-		    + i);
-		i += 4;
-		nbytes -= 4;
-	}
-	while (nbytes > 0) {
+	for(i = 0; i < nbytes; ++i)
 		rxBuf[i] = SPI_READ8(sc, PINGPONGFIFOREGS + i);
-		++i;
-		--nbytes;
-	}
 }
 
 static void

@@ -40,7 +40,6 @@ __FBSDID("$FreeBSD$");
 #include <dev/uart/uart_cpu.h>
 #include <dev/uart/uart_bus.h>
 
-#include <mips/atheros/ar933x_uart.h>
 #include <mips/broadcom/bcm338x/bcm3383reg.h>
 
 #include "uart_if.h"
@@ -61,6 +60,7 @@ bcm338x_drain(struct uart_bas *bas, int what)
 {
 	int limit;
 
+#if 0
 	if (what & UART_DRAIN_TRANSMITTER) {
 		limit = 10*1024;
 
@@ -102,6 +102,7 @@ bcm338x_drain(struct uart_bas *bas, int what)
 			return (EIO);
 		}
 	}
+#endif
 	return (0);
 }
 
@@ -135,6 +136,7 @@ bcm338x_uart_get_scale_step(struct uart_bas *bas, unsigned int baud,
 	unsigned int tscale;
 	uint32_t clk;
 	long min_diff;
+#if 0
 
 	clk = bas->rclk;
 	*scale = 0;
@@ -159,12 +161,14 @@ bcm338x_uart_get_scale_step(struct uart_bas *bas, unsigned int baud,
 			*step = tstep;
 		}
 	}
+#endif
 }
 
 static int
 bcm338x_param(struct uart_bas *bas, int baudrate, int databits, int stopbits,
     int parity)
 {
+#if 0
 	/* UART always 8 bits */
 
 	/* UART always 1 stop bit */
@@ -190,6 +194,7 @@ bcm338x_param(struct uart_bas *bas, int baudrate, int databits, int stopbits,
 	}
 
 	uart_barrier(bas);
+#endif
 	return (0);
 }
 
@@ -393,6 +398,7 @@ bcm338x_bus_detach(struct uart_softc *sc)
 {
 	struct uart_bas *bas = &sc->sc_bas;
 	uint32_t reg;
+#if 0
 
 	/* Disable all interrupts */
 	bcm338x_setreg(bas, AR933X_UART_INT_EN_REG, 0x00000000);
@@ -402,6 +408,7 @@ bcm338x_bus_detach(struct uart_softc *sc)
 	reg &= ~AR933X_UART_CS_HOST_INT_EN;
 	bcm338x_setreg(bas, AR933X_UART_CS_REG, reg);
 	uart_barrier(bas);
+#endif
 
 	return (0);
 }
@@ -479,6 +486,7 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 	int ipend = 0;
 	uint32_t isr;
 
+#if 0
 	uart_lock(sc->sc_hwmtx);
 
 	/*
@@ -540,6 +548,7 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 	}
 
 	uart_unlock(sc->sc_hwmtx);
+#endif
 	return (ipend);
 }
 
@@ -549,11 +558,14 @@ bcm338x_bus_param(struct uart_softc *sc, int baudrate, int databits,
 {
 	struct uart_bas *bas;
 	int error;
+#if 0
 
 	bas = &sc->sc_bas;
 	uart_lock(sc->sc_hwmtx);
 	error = bcm338x_param(bas, baudrate, databits, stopbits, parity);
 	uart_unlock(sc->sc_hwmtx);
+#endif
+	error = 0;
 	return (error);
 }
 
@@ -584,6 +596,7 @@ bcm338x_bus_probe(struct uart_softc *sc)
 static int
 bcm338x_bus_receive(struct uart_softc *sc)
 {
+#if 0
 	struct uart_bas *bas = &sc->sc_bas;
 	int xc;
 
@@ -614,6 +627,7 @@ bcm338x_bus_receive(struct uart_softc *sc)
 	 */
 
 	uart_unlock(sc->sc_hwmtx);
+#endif
 
 	return (0);
 }
@@ -671,6 +685,7 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 	struct uart_bas *bas = &sc->sc_bas;
 	struct bcm338x_softc *u = (struct bcm338x_softc *)sc;
 	int i;
+#if 0
 
 	uart_lock(sc->sc_hwmtx);
 
@@ -704,6 +719,7 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 	 */
 	sc->sc_txbusy = 1;
 	uart_unlock(sc->sc_hwmtx);
+#endif
 
 	return (0);
 }
@@ -711,6 +727,7 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 static void
 bcm338x_bus_grab(struct uart_softc *sc)
 {
+#if 0
 	struct uart_bas *bas = &sc->sc_bas;
 	uint32_t reg;
 
@@ -720,11 +737,13 @@ bcm338x_bus_grab(struct uart_softc *sc)
 	reg &= ~AR933X_UART_CS_HOST_INT_EN;
 	bcm338x_setreg(bas, AR933X_UART_CS_REG, reg);
 	uart_unlock(sc->sc_hwmtx);
+#endif
 }
 
 static void
 bcm338x_bus_ungrab(struct uart_softc *sc)
 {
+#if 0
 	struct uart_bas *bas = &sc->sc_bas;
 	uint32_t reg;
 
@@ -734,4 +753,5 @@ bcm338x_bus_ungrab(struct uart_softc *sc)
 	reg |= AR933X_UART_CS_HOST_INT_EN;
 	bcm338x_setreg(bas, AR933X_UART_CS_REG, reg);
 	uart_unlock(sc->sc_hwmtx);
+#endif
 }
