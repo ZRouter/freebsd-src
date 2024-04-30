@@ -55,12 +55,47 @@ __FBSDID("$FreeBSD$");
 
 #include <mips/broadcom/bcm338x/bcm3383reg.h>
 
-//#include <mips/broadcom/bcm338x/ar5315_setup.h>
-//#include <mips/broadcom/bcm338x/ar5315_cpudef.h>
-
 extern char edata[], end[];
 
-int ar531x_soc;   // dummy
+/*
+ * Macros to access the system control coprocessor
+ */
+
+/* BMIPS5000 */
+
+#define	BMIPS_C0_CONFIG		0
+#define	BMIPS_C0_MODE		1
+#define	BMIPS_C0_ACTION		2
+#define	BMIPS_C0_EDSP		3
+#define	BMIPS_C0_BOOTVEC	4
+#define	BMIPS_C0_SLEEPCOUNT	7
+
+#define __read32_c0_register(source, sel)				\
+({ int __res;								\
+	if (sel == 0)							\
+		__asm__ __volatile__(					\
+			"mfc0\t%0, " #source "\n\t"			\
+			: "=r" (__res));				\
+	else								\
+		__asm__ __volatile__(					\
+			"mfc0\t%0, " #source ", " #sel "\n\t"		\
+			".set\tmips0\n\t"				\
+			: "=r" (__res));				\
+	__res;								\
+})
+
+#define __write32_c0_register(register, sel, value)			\
+do {									\
+	if (sel == 0)							\
+		__asm__ __volatile__(					\
+			"mtc0\t%z0, " #register "\n\t"			\
+			: : "Jr" ((unsigned int)(value)));		\
+	else								\
+		__asm__ __volatile__(					\
+			"mtc0\t%z0, " #register ", " #sel "\n\t"	\
+			".set\tmips0"					\
+			: : "Jr" ((unsigned int)(value)));		\
+} while (0)
 
 void
 platform_cpu_init()
@@ -118,6 +153,9 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 */
 
 //	ar5315_detect_sys_type();
+	// same as read_c0_brcm_config()
+	int max_cpus  = (((__read32_c0_register($22, BMIPS_C0_CONFIG) >> 6) &
+	    0x3) + 1) * 2;
 
 	/*
 	 * Just wild guess. RedBoot let us down and didn't reported 
@@ -184,6 +222,7 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 
 	strcpy(cpu_model, ar5315_get_system_type());
 */
+	printf("CPUS: %d\n", max_cpus);
 
 	init_param2(physmem);
 	mips_cpu_init();
