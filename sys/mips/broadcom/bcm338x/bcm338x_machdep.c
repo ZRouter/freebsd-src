@@ -164,7 +164,7 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 //	bcm338x_detect_sys_frequency();
 
 //	platform_counter_freq = bcm338x_cpu_freq();
-	platform_counter_freq = 600 * 1000 * 1000;
+	platform_counter_freq = 500 * 1000 * 1000;
 	mips_timer_init_params(platform_counter_freq, 1);
 	cninit();
 /*
