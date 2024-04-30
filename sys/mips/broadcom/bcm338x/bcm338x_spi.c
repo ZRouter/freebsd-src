@@ -79,7 +79,16 @@ struct bcm338x_spi_softc {
 	device_t		sc_dev;
 	struct resource		*sc_mem_res;
 	uint32_t		sc_debug;
+	struct mtx		mtx;
 };
+
+#define	BCM_SPI_LOCK_INIT(sc) \
+	mtx_init(&(sc)->mtx, device_get_nameunit((sc)->sc_dev), \
+	    "bcm338x spi driver lock", MTX_DEF)
+#define	BCM_SPI_LOCK(sc)		mtx_lock(&(sc)->mtx)
+#define	BCM_SPI_UNLOCK(sc)		mtx_unlock(&(sc)->mtx)
+#define	BCM_SPI_LOCK_ASSERT(sc, what)	mtx_assert(&(sc)->mtx, what)
+#define	BCM_SPI_LOCK_DESTROY(sc)	mtx_destroy(&(sc)->mtx)
 
 static void
 bcm338x_spi_attach_sysctl(device_t dev)
@@ -118,6 +127,8 @@ bcm338x_spi_attach(device_t dev)
 		device_printf(dev, "Could not map memory\n");
 		return (ENXIO);
 	}
+
+	BCM_SPI_LOCK_INIT(sc);
 
 	device_add_child(dev, "spibus", -1);
 
@@ -222,26 +233,52 @@ bcm338x_spi_set_clock(struct bcm338x_spi_softc *sc, int clockHz)
 }
 
 static int
-bcm338x_spi_fifo_txrx(struct ar71xx_spi_softc *sc, int cs, int size,
+bcm338x_spi_fifo_txrx(struct bcm338x_spi_softc *sc, int cs, int size,
     uint8_t *txdata, uint8_t *rxdata)
 {
+	BCM_SPI_LOCK(sc);
 	bcm338x_spi_set_clock(sc, 25000000);
+	SPI_WRITE32(sc, GLOBALCNTRLINTERRUPTSTATUS, HS_SPI_INTR_CLEAR_ALL);
 	bcm338x_spi_write(sc, txdata, size, cs, BCM_SPI_FULL);
 	if(bcm338x_spi_trans_poll(sc)) {
 		bcm338x_spi_trans_end(sc, rxdata, size);
 	}
+	SPI_WRITE32(sc, GLOBALCNTRLINTERRUPTSTATUS, HS_SPI_INTR_CLEAR_ALL);
+	BCM_SPI_UNLOCK(sc);
 	return (0);
 }
 
 static int
-bcm338x_spi_fifo_txrx2(struct ar71xx_spi_softc *sc, int cs, int cmdsize,
+bcm338x_spi_fifo_txrx2(struct bcm338x_spi_softc *sc, int cs, int cmdsize,
     int size, uint8_t *txdata, uint8_t *rxdata)
 {
-	bcm338x_spi_set_clock(sc, 25000000);
-	bcm338x_spi_read(sc, txdata, cmdsize, size, cs);
-	if(bcm338x_spi_trans_poll(sc)) {
-		bcm338x_spi_trans_end(sc, rxdata, size);
+	uint8_t cmd[5];
+	int addr, count;
+
+	BCM_SPI_LOCK(sc);
+	addr = txdata[1] << 16 | txdata[2] << 8 | txdata[3];
+	while (size > 0) {
+		count = size > 512 ? 512 : size;
+		cmd[0] = txdata[0];
+		cmd[1] = addr >> 16;
+		cmd[2] = (addr >> 8) & 0xff;
+		cmd[3] = addr & 0xff;
+		cmd[4] = 0;
+		bcm338x_spi_set_clock(sc, 25000000);
+		SPI_WRITE32(sc, GLOBALCNTRLINTERRUPTSTATUS,
+		    HS_SPI_INTR_CLEAR_ALL);
+		bcm338x_spi_read(sc, cmd, cmdsize, count, cs);
+		if(bcm338x_spi_trans_poll(sc)) {
+			bcm338x_spi_trans_end(sc, rxdata, count);
+		}
+		SPI_WRITE32(sc, GLOBALCNTRLINTERRUPTSTATUS,
+		    HS_SPI_INTR_CLEAR_ALL);
+		size -= count;
+		rxdata += count;
+		addr += count;
 	}
+	BCM_SPI_UNLOCK(sc);
+	
 #if 0
 	/* check diff at
 	 * hd -v Humax_HG100R.psimage | sed 's/ |.*//' | grep ^002200

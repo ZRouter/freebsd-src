@@ -366,6 +366,7 @@ bcm338x_gpio_attach(device_t dev)
 	}
 
 	device_printf(dev, "DieRev: %x\n", GPIO_READ(sc, DIEREVID));
+#if 0
 	for (i = 0; i < 32 ; ++i) {
 		printf("%08x ", i * 0x10);
 		for (j = 0; j < 4 ; ++j) {
@@ -374,6 +375,7 @@ bcm338x_gpio_attach(device_t dev)
 		}
 		printf("\n");
 	}
+#endif
 
 #if 0
 	if ((sc->gpio_irq_res = bus_alloc_resource_any(dev, SYS_RES_IRQ, 
