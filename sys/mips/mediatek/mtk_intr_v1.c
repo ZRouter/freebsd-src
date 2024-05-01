@@ -114,7 +114,7 @@ mtk_pic_probe(device_t dev)
 	if (ofw_bus_search_compatible(dev, compat_data)->ocd_data == 0)
 		return (ENXIO);
 
-	device_set_desc(dev, "MTK Interrupt Controller (v2)");
+	device_set_desc(dev, "MTK Interrupt Controller (v1)");
 	return (BUS_PROBE_DEFAULT);
 }
 
