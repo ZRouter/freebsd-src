@@ -155,7 +155,7 @@ RT305X_USE_UART			opt_rt305x.h
 RT_MDIO				opt_rt305x.h
 
 #
-# Tptions that control Broadcom BCM338X
+# Options that control Broadcom BCM338X
 #
 
 BCM338X_REALMEM			opt_bcm338x.h
