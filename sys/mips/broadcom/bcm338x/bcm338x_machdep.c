@@ -28,7 +28,7 @@
 __FBSDID("$FreeBSD$");
 
 #include "opt_ddb.h"
-//#include "opt_bcm338x.h"
+#include "opt_bcm338x.h"
 
 #include <sys/param.h>
 #include <sys/conf.h>
@@ -161,8 +161,12 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	 * Just wild guess. RedBoot let us down and didn't reported 
 	 * memory size
 	 */
+#if defined(BCM338X_REALMEM)
+	realmem = btoc(BCM338X_REALMEM);
+#else
 	if (realmem == 0)
 		realmem = btoc(128*1024*1024);
+#endif
 
 	/*
 	 * Allow build-time override in case Redboot lies
