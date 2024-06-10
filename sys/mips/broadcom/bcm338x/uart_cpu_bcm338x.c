@@ -75,6 +75,9 @@ uart_cpu_getdev(int devtype, struct uart_devinfo *di)
 
 	uart_bus_space_io = NULL;
 	uart_bus_space_mem = mips_bus_space_generic;
-	di->bas.bsh = MIPS_PHYS_TO_KSEG1(BCM3383_UART0_BASE);
+	if (bcm338x_soc == BCM338X_SOC_BCM3380)
+		di->bas.bsh = MIPS_PHYS_TO_KSEG1(BCM3380_UART0_BASE);
+	else
+		di->bas.bsh = MIPS_PHYS_TO_KSEG1(BCM3383_UART0_BASE);
 	return (0);
 }

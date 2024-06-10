@@ -27,7 +27,7 @@
  */
 
 #include "opt_platform.h"
-#include "opt_ar531x.h"
+#include "opt_bcm338x.h"
 
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD$");
@@ -88,10 +88,12 @@ obio_mask_irq(void *source)
 	unsigned int irq = (unsigned int)source;
 	uint32_t reg;
 
-	reg = BCM_READ_REG(AR5315_SYSREG_BASE +
-		AR5315_SYSREG_MISC_INTMASK);
-	BCM_WRITE_REG(AR5315_SYSREG_BASE
-		+ AR5315_SYSREG_MISC_INTMASK, reg & ~(1 << irq));
+	reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1));
+	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1),
+	    reg & ~(1 << irq));
+	reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
+	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3),
+	    reg & ~(1 << irq));
 }
 
 static void 
@@ -99,11 +101,11 @@ obio_unmask_irq(void *source)
 {
 	uint32_t reg;
 	unsigned int irq = (unsigned int)source;
+printf("MMM%d", irq);
 
-	reg = BCM_READ_REG(AR5315_SYSREG_BASE +
-		AR5315_SYSREG_MISC_INTMASK);
-	BCM_WRITE_REG(AR5315_SYSREG_BASE +
-		AR5315_SYSREG_MISC_INTMASK, reg | (1 << irq));
+	reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
+	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3),
+	    reg | (1 << irq));
 }
 
 static int
@@ -188,9 +190,9 @@ obio_attach(device_t dev)
 	    INTR_TYPE_MISC, NULL);
 
 	/* mask all misc interrupt */
-//	BCM_WRITE_REG(AR5315_SYSREG_BASE
-//		+ AR5315_SYSREG_MISC_INTMASK, 0);
+	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), 0);
 
+#if 0
 	/* USB init refer bcm93383-platform-devs.c brcm_chip_usb_init() */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
 	    BCM_READ_REG(BCM3383_INTC_BASE + 0x0c));
@@ -209,10 +211,11 @@ obio_attach(device_t dev)
 
 	device_printf(dev, "Broadcom CHIP ID: %x\n",
 	    BCM_READ_REG(BCM3383_INTC_BASE));
-#if 0
+
 	// Timer intr test
-	int reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
-	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), reg | 1);
+//	int reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
+//	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), reg | 1);
+	obio_unmask_irq(INTERRUPT_ID_TIMER);
 
 	/* Stop Timer */
 	BCM_WRITE_REG(BCM3383_TIMER_BASE + 0x04, 0);
@@ -401,10 +404,13 @@ obio_filter(void *arg)
 
 printf("MORIMORI ");
 	/* Interrupt Disable */
+/*
 	int reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1));
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1), reg & ~1);
 	reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), reg & ~1);
+*/
+	obio_mask_irq(INTERRUPT_ID_TIMER);
 #if 0
 
 	td = curthread;

@@ -55,6 +55,8 @@ __FBSDID("$FreeBSD$");
 
 #include <mips/broadcom/bcm338x/bcm3383reg.h>
 
+enum bcm338x_soc_type bcm338x_soc;
+
 extern char edata[], end[];
 
 /*
@@ -69,6 +71,12 @@ extern char edata[], end[];
 #define	BMIPS_C0_EDSP		3
 #define	BMIPS_C0_BOOTVEC	4
 #define	BMIPS_C0_SLEEPCOUNT	7
+
+#define	CP0_BCM_CFG_ICSHEN	(0x1 << 31)
+#define	CP0_BCM_CFG_DCSHEN	(0x1 << 30)
+#define	CP0_BCM_CFG_TLBPD	(0x1 << 28)
+#define	CP0_BCM_CFG_CLF		(0x1 << 20)
+
 
 #define __read32_c0_register(source, sel)				\
 ({ int __res;								\
@@ -96,6 +104,23 @@ do {									\
 			".set\tmips0"					\
 			: : "Jr" ((unsigned int)(value)));		\
 } while (0)
+
+void
+bcm338x_detect_sys_type(void)
+{
+	int id;
+
+	id = BCM_READ_REG(BCM3383_PERIPH_BASE) >> 16;
+
+	if (id == 0x3380)
+		bcm338x_soc = BCM338X_SOC_BCM3380;
+	else if (id == 0x3383)
+		bcm338x_soc = BCM338X_SOC_BCM3383;
+	else if (id == 0x3384)
+		bcm338x_soc = BCM338X_SOC_BCM3384;
+	else
+		bcm338x_soc = BCM338X_SOC_UNKNOWN;
+}
 
 void
 platform_cpu_init()
@@ -152,10 +177,14 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	}
 */
 
-//	ar5315_detect_sys_type();
+	bcm338x_detect_sys_type();
 	// same as read_c0_brcm_config()
 	int max_cpus  = (((__read32_c0_register($22, BMIPS_C0_CONFIG) >> 6) &
 	    0x3) + 1) * 2;
+
+	int cfg  = __read32_c0_register($22, BMIPS_C0_CONFIG);
+	cfg |= (CP0_BCM_CFG_ICSHEN | CP0_BCM_CFG_DCSHEN);
+	 __write32_c0_register($22, BMIPS_C0_CONFIG, cfg);
 
 	/*
 	 * Just wild guess. RedBoot let us down and didn't reported 
@@ -226,6 +255,7 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 
 	strcpy(cpu_model, ar5315_get_system_type());
 */
+	printf("MODEL: %d\n", bcm338x_soc);
 	printf("CPUS: %d\n", max_cpus);
 
 	init_param2(physmem);

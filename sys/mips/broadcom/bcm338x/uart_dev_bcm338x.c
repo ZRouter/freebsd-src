@@ -486,9 +486,9 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 	int ipend = 0;
 	uint32_t isr;
 
-#if 0
 	uart_lock(sc->sc_hwmtx);
 
+#if 0
 	/*
 	 * Fetch/ACK the ISR status.
 	 */
@@ -546,9 +546,27 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 			ipend |= SER_INT_SIGCHG;
 		}
 	}
+#endif
+	unsigned int rx_level;
+	rx_level = bcm338x_getreg(bas, 0x08);
+	rx_level = rx_level >> 16;
+	rx_level &= 0x1f;
+	if (rx_level)
+		ipend |= SER_INT_RXREADY;
+
+	uint32_t tx_level;
+	if (sc->sc_txbusy) {
+		tx_level = bcm338x_getreg(bas, 0x08);
+		tx_level = tx_level >> 24;
+		tx_level &= 0x1f;
+		if (tx_level == 0)
+			ipend |= SER_INT_TXIDLE;
+		else
+			ipend |= SER_INT_SIGCHG;
+	}
 
 	uart_unlock(sc->sc_hwmtx);
-#endif
+
 	return (ipend);
 }
 
@@ -584,19 +602,18 @@ bcm338x_bus_probe(struct uart_softc *sc)
 
 	/* Reset FIFOs. */
 	bcm338x_drain(bas, UART_FLUSH_RECEIVER|UART_FLUSH_TRANSMITTER);
+#endif
 
 	/* XXX TODO: actually find out what the FIFO depth is! */
 	sc->sc_rxfifosz = 16;
 	sc->sc_txfifosz = 16;
 
-#endif
 	return (0);
 }
 
 static int
 bcm338x_bus_receive(struct uart_softc *sc)
 {
-#if 0
 	struct uart_bas *bas = &sc->sc_bas;
 	int xc;
 
@@ -604,17 +621,16 @@ bcm338x_bus_receive(struct uart_softc *sc)
 
 	/* Loop over until we are full, or no data is available */
 	while (bcm338x_rxready(bas)) {
+/*
 		if (uart_rx_full(sc)) {
 			sc->sc_rxbuf[sc->sc_rxput] = UART_STAT_OVERRUN;
 			break;
 		}
+*/
 
 		/* Read the top of the RX FIFO */
-		xc = bcm338x_getreg(bas, AR933X_UART_DATA_REG) & 0xff;
+		xc = bcm338x_getreg(bas, 0x14) & 0xff;
 
-		/* Remove that entry from said RX FIFO */
-		bcm338x_setreg(bas, AR933X_UART_DATA_REG,
-		    AR933X_UART_DATA_RX_CSR);
 		uart_barrier(bas);
 
 		/* XXX frame, parity error */
@@ -627,7 +643,6 @@ bcm338x_bus_receive(struct uart_softc *sc)
 	 */
 
 	uart_unlock(sc->sc_hwmtx);
-#endif
 
 	return (0);
 }
@@ -685,10 +700,15 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 	struct uart_bas *bas = &sc->sc_bas;
 	struct bcm338x_softc *u = (struct bcm338x_softc *)sc;
 	int i;
-#if 0
 
 	uart_lock(sc->sc_hwmtx);
 
+	for (i = 0; i < sc->sc_txdatasz; i++) {
+		bcm338x_setreg(bas, 0x14, sc->sc_txbuf[i] & 0xff);
+		uart_barrier(bas);
+	}
+
+#if 0
 	/* Wait for the FIFO to be clear - see above */
 	while (bcm338x_getreg(bas, AR933X_UART_CS_REG) &
 	    AR933X_UART_CS_TX_BUSY)
@@ -712,6 +732,7 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 	bcm338x_setreg(bas, AR933X_UART_INT_EN_REG, u->u_ier);
 	uart_barrier(bas);
 
+#endif
 	/*
 	 * Inform the upper layer that we are presently transmitting
 	 * data to the hardware; this will be cleared when the
@@ -719,7 +740,6 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 	 */
 	sc->sc_txbusy = 1;
 	uart_unlock(sc->sc_hwmtx);
-#endif
 
 	return (0);
 }
