@@ -370,7 +370,6 @@ bcm338x_bus_attach(struct uart_softc *sc)
 	uint32_t reg;
 
 	/* XXX TODO: flush transmitter */
-#if 0
 
 	/*
 	 * Setup initial interrupt notifications.
@@ -379,11 +378,12 @@ bcm338x_bus_attach(struct uart_softc *sc)
 	 * Later on (when they're handled), also handle
 	 * RX errors/overflow.
 	 */
-	u->u_ier = AR933X_UART_INT_RX_VALID;
+	u->u_ier = (UART_INT_RXFIFONE << 16);
 
 	/* Enable RX interrupts to kick-start things */
-	bcm338x_setreg(bas, AR933X_UART_INT_EN_REG, u->u_ier);
+	bcm338x_setreg(bas, 0x10, u->u_ier);
 
+#if 0
 	/* Enable the host interrupt now */
 	reg = bcm338x_getreg(bas, AR933X_UART_CS_REG);
 	reg |= AR933X_UART_CS_HOST_INT_EN;
@@ -485,21 +485,22 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 	struct uart_bas *bas = &sc->sc_bas;
 	int ipend = 0;
 	uint32_t isr;
+	uint32_t reg;
 
 	uart_lock(sc->sc_hwmtx);
 
-#if 0
 	/*
 	 * Fetch/ACK the ISR status.
 	 */
-	isr = bcm338x_getreg(bas, AR933X_UART_INT_REG);
-	bcm338x_setreg(bas, AR933X_UART_INT_REG, isr);
+	isr = bcm338x_getreg(bas, 0x10);
+	bcm338x_setreg(bas, 0x10, isr & 0xffff0000);
+	isr = (isr >> 16) & isr;
 	uart_barrier(bas);
 
 	/*
 	 * RX ready - notify upper layer.
 	 */
-	if (isr & AR933X_UART_INT_RX_VALID) {
+	if (isr & UART_INT_RXFIFONE) {
 		ipend |= SER_INT_RXREADY;
 	}
 
@@ -525,12 +526,12 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 	 * will wait for the FIFO to finish draining before it pushes
 	 * more frames into it.
 	 */
-	if (isr & AR933X_UART_INT_TX_EMPTY) {
+	if (isr & UART_INT_TXFIFOEMT) {
 		/*
 		 * Update u_ier to disable TX notifications; update hardware
 		 */
-		u->u_ier &= ~AR933X_UART_INT_TX_EMPTY;
-		bcm338x_setreg(bas, AR933X_UART_INT_EN_REG, u->u_ier);
+		u->u_ier &= ~(UART_INT_TXFIFOEMT << 16);
+		bcm338x_setreg(bas, 0x10, u->u_ier);
 		uart_barrier(bas);
 	}
 
@@ -540,29 +541,11 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 	 * XXX I never get _out_ of txbusy? Debug that!
 	 */
 	if (sc->sc_txbusy) {
-		if (isr & AR933X_UART_INT_TX_EMPTY) {
+		if (isr & UART_INT_TXFIFOEMT) {
 			ipend |= SER_INT_TXIDLE;
 		} else {
 			ipend |= SER_INT_SIGCHG;
 		}
-	}
-#endif
-	unsigned int rx_level;
-	rx_level = bcm338x_getreg(bas, 0x08);
-	rx_level = rx_level >> 16;
-	rx_level &= 0x1f;
-	if (rx_level)
-		ipend |= SER_INT_RXREADY;
-
-	uint32_t tx_level;
-	if (sc->sc_txbusy) {
-		tx_level = bcm338x_getreg(bas, 0x08);
-		tx_level = tx_level >> 24;
-		tx_level &= 0x1f;
-		if (tx_level == 0)
-			ipend |= SER_INT_TXIDLE;
-		else
-			ipend |= SER_INT_SIGCHG;
 	}
 
 	uart_unlock(sc->sc_hwmtx);
@@ -700,6 +683,7 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 	struct uart_bas *bas = &sc->sc_bas;
 	struct bcm338x_softc *u = (struct bcm338x_softc *)sc;
 	int i;
+	uint32_t reg;
 
 	uart_lock(sc->sc_hwmtx);
 
@@ -723,16 +707,16 @@ bcm338x_bus_transmit(struct uart_softc *sc)
 		    (sc->sc_txbuf[i] & 0xff) | AR933X_UART_DATA_TX_CSR);
 		uart_barrier(bas);
 	}
+#endif
 
 	/*
 	 * Now that we're transmitting, get interrupt notification
 	 * when the FIFO is (almost) empty - see above.
 	 */
-	u->u_ier |= AR933X_UART_INT_TX_EMPTY;
-	bcm338x_setreg(bas, AR933X_UART_INT_EN_REG, u->u_ier);
+	u->u_ier |= (UART_INT_TXFIFOEMT << 16);
+	bcm338x_setreg(bas, 0x10, u->u_ier);
 	uart_barrier(bas);
 
-#endif
 	/*
 	 * Inform the upper layer that we are presently transmitting
 	 * data to the hardware; this will be cleared when the

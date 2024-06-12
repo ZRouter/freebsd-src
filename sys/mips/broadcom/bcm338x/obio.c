@@ -101,7 +101,6 @@ obio_unmask_irq(void *source)
 {
 	uint32_t reg;
 	unsigned int irq = (unsigned int)source;
-printf("MMM%d", irq);
 
 	reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3),
@@ -192,6 +191,7 @@ obio_attach(device_t dev)
 	/* mask all misc interrupt */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), 0);
 
+	obio_unmask_irq(INTERRUPT_ID_UART0);
 #if 0
 	/* USB init refer bcm93383-platform-devs.c brcm_chip_usb_init() */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
@@ -212,10 +212,11 @@ obio_attach(device_t dev)
 	device_printf(dev, "Broadcom CHIP ID: %x\n",
 	    BCM_READ_REG(BCM3383_INTC_BASE));
 
+#endif
 	// Timer intr test
 //	int reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
 //	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), reg | 1);
-	obio_unmask_irq(INTERRUPT_ID_TIMER);
+//	obio_unmask_irq(INTERRUPT_ID_TIMER);
 
 	/* Stop Timer */
 	BCM_WRITE_REG(BCM3383_TIMER_BASE + 0x04, 0);
@@ -233,7 +234,6 @@ obio_attach(device_t dev)
 		}
 		printf("\n");
 	}
-#endif
 
 	bus_generic_probe(dev);
 	bus_enumerate_hinted_children(dev);
@@ -400,25 +400,35 @@ obio_filter(void *arg)
 {
 	struct obio_softc *sc = arg;
 	struct thread *td;
-	uint32_t i, intr;
+	uint32_t i, j, intr;
 
-printf("MORIMORI ");
+//printf("MORIMORI ");
 	/* Interrupt Disable */
+#if 0
+	for (i = 0; i < 16 ; ++i) {
+		printf("%08x ", i * 0x10);
+		for (j = 0; j < 4 ; ++j) {
+			printf("%08x ",
+			    BCM_READ_REG(BCM3383_INTC_BASE + i * 0x10 + j * 4));
+//			    BCM_READ_REG(BCM3383_EHCI_BASE + i * 0x10 + j * 4));
+		}
+		printf("\n");
+	}
+#endif
 /*
 	int reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1));
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1), reg & ~1);
 	reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), reg & ~1);
 */
-	obio_mask_irq(INTERRUPT_ID_TIMER);
-#if 0
+//	obio_mask_irq(INTERRUPT_ID_TIMER);
 
 	td = curthread;
 	/* Workaround: do not inflate intr nesting level */
 	td->td_intr_nesting_level--;
 
-	intr = BCM_READ_REG(AR5315_SYSREG_BASE +
-		AR5315_SYSREG_MISC_INTSTAT);
+	intr = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1)) &
+	    BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
 
 	while ((i = fls(intr)) != 0) {
 		i--;
@@ -433,10 +443,11 @@ printf("MORIMORI ");
 		}
 	}
 
+	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1), 0);
+
 	KASSERT(i == 0, ("all interrupts handled"));
 
 	td->td_intr_nesting_level++;
-#endif
 
 	return (FILTER_HANDLED);
 
