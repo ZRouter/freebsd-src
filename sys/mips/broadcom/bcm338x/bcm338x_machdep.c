@@ -263,6 +263,8 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 
 	int clk = BCM_READ_REG(BCM3383_PERIPH_BASE + 4);
 	BCM_WRITE_REG(BCM3383_PERIPH_BASE + 4, clk | 0x40);   // Unimac0ClkEn
+	clk = BCM_READ_REG(BCM3383_PERIPH_BASE + 8);
+	BCM_WRITE_REG(BCM3383_PERIPH_BASE + 8, clk | 0x100);   // GphyClkEn
 
 	init_param2(physmem);
 	mips_cpu_init();
