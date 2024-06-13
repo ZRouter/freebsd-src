@@ -257,6 +257,12 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 */
 	printf("MODEL: %d\n", bcm338x_soc);
 	printf("CPUS: %d\n", max_cpus);
+	printf("%08x %08x %08x\n", BCM_READ_REG(BCM3383_PERIPH_BASE + 4),
+	    BCM_READ_REG(BCM3383_PERIPH_BASE + 8),
+	    BCM_READ_REG(BCM3383_PERIPH_BASE + 12));
+
+	int clk = BCM_READ_REG(BCM3383_PERIPH_BASE + 4);
+	BCM_WRITE_REG(BCM3383_PERIPH_BASE + 4, clk | 0x40);   // Unimac0ClkEn
 
 	init_param2(physmem);
 	mips_cpu_init();
