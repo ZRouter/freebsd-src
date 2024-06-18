@@ -192,7 +192,6 @@ obio_attach(device_t dev)
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), 0);
 
 	obio_unmask_irq(INTERRUPT_ID_UART0);
-#if 0
 	/* USB init refer bcm93383-platform-devs.c brcm_chip_usb_init() */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
 	    BCM_READ_REG(BCM3383_INTC_BASE + 0x0c));
@@ -204,11 +203,14 @@ obio_attach(device_t dev)
 	for (i = 0; i < 1000; ++i) ;
 	BCM_WRITE_REG(BCM3383_USBCTL_BASE, ~(1 << 6) &
 	    BCM_READ_REG(BCM3383_USBCTL_BASE));
+
 	BCM_WRITE_REG(BCM3383_USBCTL_BASE, (1 << 4) |
 	    BCM_READ_REG(BCM3383_USBCTL_BASE));
 	BCM_WRITE_REG(BCM3383_USBCTL_BASE + 0xc, 9 |
 	    BCM_READ_REG(BCM3383_USBCTL_BASE + 0xc));
 
+	BCM_WRITE_REG(BCM3383_USBCTL_BASE + 0x04, 0x512750c0);
+#if 0
 	device_printf(dev, "Broadcom CHIP ID: %x\n",
 	    BCM_READ_REG(BCM3383_INTC_BASE));
 
@@ -224,12 +226,13 @@ obio_attach(device_t dev)
 	/* Start Timer */
 	BCM_WRITE_REG(BCM3383_TIMER_BASE + 0x04, (1 << 31) | 0xffffff);
 
+	int off = BCM3383_USBCTL_BASE;
+//	int off = BCM3383_INTC_BASE;
 	for (i = 0; i < 16 ; ++i) {
 		printf("%08x ", i * 0x10);
 		for (j = 0; j < 4 ; ++j) {
 			printf("%08x ",
-			    BCM_READ_REG(BCM3383_INTC_BASE + i * 0x10 + j * 4));
-//			    BCM_READ_REG(BCM3383_EHCI_BASE + i * 0x10 + j * 4));
+			    BCM_READ_REG(off + i * 0x10 + j * 4));
 		}
 		printf("\n");
 	}
