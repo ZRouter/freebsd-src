@@ -82,10 +82,8 @@ uart_bcm338x_probe(device_t dev)
 	bcopy(&sc->sc_sysdev->bas, &sc->sc_bas, sizeof(sc->sc_bas));
 	sc->sc_sysdev->bas.regshft = 0;
 	sc->sc_sysdev->bas.bst = mips_bus_space_generic;
-	sc->sc_sysdev->bas.bsh = MIPS_PHYS_TO_KSEG1(BCM3383_UART0_BASE);
 	sc->sc_bas.regshft = 0;
 	sc->sc_bas.bst = mips_bus_space_generic;
-	sc->sc_bas.bsh = MIPS_PHYS_TO_KSEG1(BCM3383_UART0_BASE);
 
 	return (uart_bus_probe(dev, 0, 0, freq, 0, 0, 0));
 }
