@@ -23,6 +23,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * Only support BCM3383. BCM3380 is OTG.
  */
 
 #include <sys/cdefs.h>
@@ -107,7 +109,6 @@ ohci_obio_attach(device_t self)
 	sc->sc_io_hdl = rman_get_bushandle(sc->sc_io_res);
 	sc->sc_io_size = rman_get_size(sc->sc_io_res);
 
-#if 0
 	rid = 0;
 	sc->sc_irq_res = bus_alloc_resource_any(self, SYS_RES_IRQ, &rid,
 		RF_SHAREABLE | RF_ACTIVE);
@@ -115,7 +116,6 @@ ohci_obio_attach(device_t self)
 		device_printf(self, "Could not allocate irq\n");
 		goto error;
 	}
-#endif
 
 	sc->sc_bus.bdev = device_add_child(self, "usbus", -1);
 	if (!(sc->sc_bus.bdev)) {
@@ -125,7 +125,7 @@ ohci_obio_attach(device_t self)
 	device_set_ivars(sc->sc_bus.bdev, &sc->sc_bus);
 	device_set_desc(sc->sc_bus.bdev, OHCI_HC_DEVSTR);
 
-	sprintf(sc->sc_vendor, "Ralink");
+	sprintf(sc->sc_vendor, "Broadcom");
 
 	err = bus_setup_intr(self, sc->sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
 		NULL, (driver_intr_t *)ohci_interrupt, sc, &sc->sc_intr_hdl);

@@ -23,6 +23,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ * Only support BCM3383. BCM3380 is OTG.
  */
 
 #include <sys/cdefs.h>
@@ -109,7 +111,7 @@ ehci_obio_attach(device_t self)
 	sc->sc_io_hdl = rman_get_bushandle(sc->sc_io_res);
 	sc->sc_io_size = rman_get_size(sc->sc_io_res);
 
-/*
+#if 0
 	int i, j;
 	for (i = 0; i < 32 ; ++i) {
 		printf("%08x ", i * 0x10);
@@ -120,7 +122,7 @@ ehci_obio_attach(device_t self)
 		}
 		printf("\n");
         }
-*/
+#endif
 
 	rid = 0;
 	sc->sc_irq_res = bus_alloc_resource_any(self, SYS_RES_IRQ, &rid,
@@ -140,7 +142,7 @@ ehci_obio_attach(device_t self)
 	device_set_ivars(sc->sc_bus.bdev, &sc->sc_bus);
 	device_set_desc(sc->sc_bus.bdev, EHCI_HC_DEVSTR);
 
-	sprintf(sc->sc_vendor, "Ralink");
+	sprintf(sc->sc_vendor, "Broadcom");
 
 	err = bus_setup_intr(self, sc->sc_irq_res, INTR_TYPE_BIO | INTR_MPSAFE,
 		NULL, (driver_intr_t *)ehci_interrupt, sc, &sc->sc_intr_hdl);
