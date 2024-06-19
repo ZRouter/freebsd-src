@@ -151,6 +151,8 @@ obio_attach(device_t dev)
 	/* mask all misc interrupt */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), 0);
 
+	obio_unmask_irq(INTERRUPT_ID_USB_EHCI);
+
 	/* USB init refer bcm93383-platform-devs.c brcm_chip_usb_init() */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
 	    BCM_READ_REG(BCM3383_INTC_BASE + 0x0c));
@@ -394,24 +396,24 @@ obio_filter(void *arg)
 {
 	struct obio_softc *sc = arg;
 	struct intr_event *event;
-	uint32_t reg, irq, intr;
-	int i;
+	uint32_t irq, intr;
 
 	intr = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1)) &
 	    BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
 
-	while ((i = fls(intr)) != 0) {
-		i--;
-		intr &= ~(1u << i);
+	while ((irq = fls(intr)) != 0) {
+		irq--;
+		intr &= ~(1u << irq);
 
-		event = sc->sc_eventstab[i];
+		event = sc->sc_eventstab[irq];
 		if (!event || CK_SLIST_EMPTY(&event->ie_handlers)) {
 			printf("Stray OBIO IRQ %d\n", irq);
+			obio_mask_irq(irq);
 			continue;
 		}
 
 		intr_event_handle(event, PCPU_GET(curthread)->td_intr_frame);
-		mips_intrcnt_inc(sc->sc_intr_counter[i]);
+		mips_intrcnt_inc(sc->sc_intr_counter[irq]);
 	}
 
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1), 0);
