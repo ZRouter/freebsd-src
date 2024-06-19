@@ -34,10 +34,12 @@
 #define	APB_IRQ_END		31
 #define	APB_NIRQS		32
 
+#ifdef INTRNG
 struct apb_pic_irqsrc {
 	struct intr_irqsrc	isrc;
 	u_int			irq;
 };
+#endif
 
 struct apb_softc {
 	device_t		apb_dev;
