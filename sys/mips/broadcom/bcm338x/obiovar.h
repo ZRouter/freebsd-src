@@ -34,21 +34,16 @@
 #define	OBIO_IRQ_END		31
 #define	OBIO_NIRQS		32
 
-struct obio_pic_irqsrc {
-	struct intr_irqsrc	isrc;
-	u_int			irq;
-};
-
 struct obio_softc {
 	device_t		obio_dev;
 	struct rman		obio_irq_rman;
 	struct rman		obio_mem_rman;
 	/* IRQ events structs for child devices */
 	struct intr_event	*sc_eventstab[OBIO_NIRQS];
+	mips_intrcnt_t		sc_intr_counter[OBIO_NIRQS];
 	/* Resources and cookies for MIPS CPU INTs */
 	struct resource		*sc_misc_irq;
 	void			*sc_misc_ih;
-	struct obio_pic_irqsrc	pic_irqs[OBIO_NIRQS];
 };
 
 struct obio_ivar {

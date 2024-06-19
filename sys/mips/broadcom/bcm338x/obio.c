@@ -46,11 +46,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/pmckern.h>
 
 #include <machine/bus.h>
-#include <machine/intr.h>
-
-#include "pic_if.h"
-
-#define PIC_INTR_ISRC(sc, irq)	(&(sc)->pic_irqs[(irq)].isrc)
+#include <machine/intr_machdep.h>
 
 #include <mips/broadcom/bcm338x/obiovar.h>
 #include <mips/broadcom/bcm338x/bcm3383reg.h>
@@ -81,6 +77,10 @@ static int	obio_filter(void *);
 static int	obio_probe(device_t);
 static int	obio_release_resource(device_t, device_t, int, int,
 		    struct resource *);
+static int	obio_setup_intr(device_t, device_t, struct resource *, int,
+		    driver_filter_t *, driver_intr_t *, void *, void **);
+static int	obio_teardown_intr(device_t, device_t, struct resource *,
+		    void *);
 
 static void 
 obio_mask_irq(void *source)
@@ -108,38 +108,9 @@ obio_unmask_irq(void *source)
 }
 
 static int
-obio_pic_register_isrcs(struct obio_softc *sc)
-{
-	int error;
-	uint32_t irq;
-	struct intr_irqsrc *isrc;
-	const char *name;
-
-	name = device_get_nameunit(sc->obio_dev);
-	for (irq = 0; irq < OBIO_NIRQS; irq++) {
-		sc->pic_irqs[irq].irq = irq;
-		isrc = PIC_INTR_ISRC(sc, irq);
-		error = intr_isrc_register(isrc, sc->obio_dev, 0, "%s", name);
-		if (error != 0) {
-			/* XXX call intr_isrc_deregister */
-			device_printf(sc->obio_dev, "%s failed", __func__);
-			return (error);
-		}
-	}
-
-	return (0);
-}
-
-static inline intptr_t
-pic_xref(device_t dev)
-{
-        return (0);
-}
-
-static int
 obio_probe(device_t dev)
 {
-	device_set_desc(dev, "OBIO Bus bridge INTRNG");
+	device_set_desc(dev, "OBIO Bus bridge");
 
 	return (0);
 }
@@ -148,8 +119,7 @@ static int
 obio_attach(device_t dev)
 {
 	struct obio_softc *sc = device_get_softc(dev);
-	intptr_t xref = pic_xref(dev);
-	int picirq;
+	int rid = 0;
 	int i, j;
 
 	sc->obio_dev = dev;
@@ -169,29 +139,23 @@ obio_attach(device_t dev)
 			OBIO_IRQ_BASE, OBIO_IRQ_END) != 0)
 		panic("obio_attach: failed to set up IRQ rman");
 
-	/* Register the interrupts */
-	if (obio_pic_register_isrcs(sc) != 0) {
-		device_printf(dev, "could not register PIC ISRCs\n");
+	if ((sc->sc_misc_irq = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid, 
+	    RF_SHAREABLE | RF_ACTIVE)) == NULL) {
+		device_printf(dev, "unable to allocate IRQ resource\n");
 		return (ENXIO);
 	}
 
-	/*
-	 * Now, when everything is initialized, it's right time to
-	 * register interrupt controller to interrupt framefork.
-	 */
-	if (intr_pic_register(dev, xref) == NULL) {
-		device_printf(dev, "could not register PIC\n");
+	if ((bus_setup_intr(dev, sc->sc_misc_irq, INTR_TYPE_MISC,
+	    obio_filter, NULL, sc, &sc->sc_misc_ih))) {
+		device_printf(dev,
+		    "WARNING: unable to register interrupt handler\n");
 		return (ENXIO);
 	}
-
-	picirq = 2;
-	cpu_establish_hardintr("aric", obio_filter, NULL, sc, picirq,
-	    INTR_TYPE_MISC, NULL);
 
 	/* mask all misc interrupt */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), 0);
 
-	obio_unmask_irq(INTERRUPT_ID_UART0);
+//	obio_unmask_irq(INTERRUPT_ID_UART0);
 	/* USB init refer bcm93383-platform-devs.c brcm_chip_usb_init() */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
 	    BCM_READ_REG(BCM3383_INTC_BASE + 0x0c));
@@ -375,60 +339,68 @@ obio_setup_intr(device_t bus, device_t child, struct resource *ires,
 	struct obio_softc *sc = device_get_softc(bus);
 	int error;
 	int irq;
-
-	struct intr_irqsrc *isrc;
-	const char *name;
-	
-	if ((rman_get_flags(ires) & RF_SHAREABLE) == 0)
-		flags |= INTR_EXCL;
+	struct intr_event *event;
 
 	irq = rman_get_start(ires);
-	isrc = PIC_INTR_ISRC(sc, irq);
-	if(isrc->isrc_event == 0) {
-		error = intr_event_create(&isrc->isrc_event, (void *)irq,
-		    0, irq, obio_mask_irq, obio_unmask_irq,
-		    NULL, NULL, "obio intr%d:", irq);
-		if(error != 0)
-			return(error);
-	}
-	name = device_get_nameunit(child);
-	error = intr_event_add_handler(isrc->isrc_event, name, filt, handler,
-            arg, intr_priority(flags), flags, cookiep);
 
-	return(error);
+	if (irq > OBIO_IRQ_END)
+		panic("%s: bad irq %d", __func__, irq);
+
+	event = sc->sc_eventstab[irq];
+	if (event == NULL) {
+		error = intr_event_create(&event, (void *)irq, 0, irq, 
+		    obio_mask_irq, obio_unmask_irq,
+		    NULL, NULL,
+		    "obio intr%d:", irq);
+
+		if (error == 0) {
+			sc->sc_eventstab[irq] = event;
+			sc->sc_intr_counter[irq] =
+			    mips_intrcnt_create(event->ie_name);
+		}
+		else
+			return (error);
+	}
+
+	intr_event_add_handler(event, device_get_nameunit(child), filt,
+	    handler, arg, intr_priority(flags), flags, cookiep);
+	mips_intrcnt_setname(sc->sc_intr_counter[irq], event->ie_fullname);
+
+	obio_unmask_irq((void*)irq);
+
+	return (0);
+}
+
+static int
+obio_teardown_intr(device_t dev, device_t child, struct resource *ires,
+    void *cookie)
+{
+	struct obio_softc *sc = device_get_softc(dev);
+	int irq, result;
+
+	irq = rman_get_start(ires);
+	if (irq > OBIO_IRQ_END)
+		panic("%s: bad irq %d", __func__, irq);
+
+	if (sc->sc_eventstab[irq] == NULL)
+		panic("Trying to teardown unoccupied IRQ");
+
+	obio_mask_irq((void*)irq);
+
+	result = intr_event_remove_handler(cookie);
+	if (!result)
+		sc->sc_eventstab[irq] = NULL;
+
+	return (result);
 }
 
 static int
 obio_filter(void *arg)
 {
 	struct obio_softc *sc = arg;
-	struct thread *td;
-	uint32_t i, j, intr;
-
-//printf("MORIMORI ");
-	/* Interrupt Disable */
-#if 0
-	for (i = 0; i < 16 ; ++i) {
-		printf("%08x ", i * 0x10);
-		for (j = 0; j < 4 ; ++j) {
-			printf("%08x ",
-			    BCM_READ_REG(BCM3383_INTC_BASE + i * 0x10 + j * 4));
-//			    BCM_READ_REG(BCM3383_EHCI_BASE + i * 0x10 + j * 4));
-		}
-		printf("\n");
-	}
-#endif
-/*
-	int reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1));
-	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1), reg & ~1);
-	reg = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
-	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), reg & ~1);
-*/
-//	obio_mask_irq(INTERRUPT_ID_TIMER);
-
-	td = curthread;
-	/* Workaround: do not inflate intr nesting level */
-	td->td_intr_nesting_level--;
+	struct intr_event *event;
+	uint32_t reg, irq, intr;
+	int i;
 
 	intr = BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1)) &
 	    BCM_READ_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3));
@@ -437,23 +409,19 @@ obio_filter(void *arg)
 		i--;
 		intr &= ~(1u << i);
 
-		if (intr_isrc_dispatch(PIC_INTR_ISRC(sc, i),
-		    curthread->td_intr_frame) != 0) {
-			device_printf(sc->obio_dev,
-			    "Stray interrupt %u detected\n", i);
-			obio_mask_irq((void*)i);
+		event = sc->sc_eventstab[i];
+		if (!event || CK_SLIST_EMPTY(&event->ie_handlers)) {
+			printf("Stray OBIO IRQ %d\n", irq);
 			continue;
 		}
+
+		intr_event_handle(event, PCPU_GET(curthread)->td_intr_frame);
+		mips_intrcnt_inc(sc->sc_intr_counter[i]);
 	}
 
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3 + 1), 0);
 
-	KASSERT(i == 0, ("all interrupts handled"));
-
-	td->td_intr_nesting_level++;
-
 	return (FILTER_HANDLED);
-
 }
 
 static void
@@ -535,56 +503,6 @@ obio_get_resource_list(device_t dev, device_t child)
 	return (&(ivar->resources));
 }
 
-static void
-obio_pic_enable_intr(device_t dev, struct intr_irqsrc *isrc)
-{
-	u_int irq;
-
-	irq = ((struct obio_pic_irqsrc *)isrc)->irq;
-	obio_unmask_irq((void*)irq);
-}
-
-static void
-obio_pic_disable_intr(device_t dev, struct intr_irqsrc *isrc)
-{
-	u_int irq;
-
-	irq = ((struct obio_pic_irqsrc *)isrc)->irq;
-	obio_mask_irq((void*)irq);
-}
-
-static void
-obio_pic_pre_ithread(device_t dev, struct intr_irqsrc *isrc)
-{
-	obio_pic_disable_intr(dev, isrc);
-}
-
-static void
-obio_pic_post_ithread(device_t dev, struct intr_irqsrc *isrc)
-{
-	obio_pic_enable_intr(dev, isrc);
-}
-
-static void
-obio_pic_post_filter(device_t dev, struct intr_irqsrc *isrc)
-{
-	uint32_t reg, irq;
-
-	irq = ((struct obio_pic_irqsrc *)isrc)->irq;
-	reg = BCM_READ_REG(AR5315_SYSREG_BASE +
-		AR5315_SYSREG_MISC_INTSTAT);
-	BCM_WRITE_REG(AR5315_SYSREG_BASE + AR5315_SYSREG_MISC_INTSTAT,
-	    reg & ~(1 << irq));
-}
-
-static int
-obio_pic_map_intr(device_t dev, struct intr_map_data *data,
-    struct intr_irqsrc **isrcp)
-{
-	return (ENOTSUP);
-}
-
-
 static device_method_t obio_methods[] = {
 	DEVMETHOD(bus_activate_resource,	obio_activate_resource),
 	DEVMETHOD(bus_add_child,		obio_add_child),
@@ -597,14 +515,8 @@ static device_method_t obio_methods[] = {
 	DEVMETHOD(device_probe,			obio_probe),
 	DEVMETHOD(bus_get_resource,		bus_generic_rl_get_resource),
 	DEVMETHOD(bus_set_resource,		bus_generic_rl_set_resource),
-	DEVMETHOD(pic_disable_intr,		obio_pic_disable_intr),
-	DEVMETHOD(pic_enable_intr,		obio_pic_enable_intr),
-	DEVMETHOD(pic_map_intr,			obio_pic_map_intr),
-	DEVMETHOD(pic_post_filter,		obio_pic_post_filter),
-	DEVMETHOD(pic_post_ithread,		obio_pic_post_ithread),
-	DEVMETHOD(pic_pre_ithread,		obio_pic_pre_ithread),
 
-//	DEVMETHOD(bus_setup_intr,		bus_generic_setup_intr),
+	DEVMETHOD(bus_teardown_intr,		obio_teardown_intr),
 	DEVMETHOD(bus_setup_intr,		obio_setup_intr),
 
 	DEVMETHOD_END

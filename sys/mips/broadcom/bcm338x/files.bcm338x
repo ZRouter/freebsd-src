@@ -17,3 +17,6 @@ mips/broadcom/bcm338x/bcm338x_gpio.c		optional gpio
 
 # UniMac code
 mips/broadcom/bcm338x/if_unimac.c		optional unimac
+
+mips/mips/intr_machdep.c			standard
+
