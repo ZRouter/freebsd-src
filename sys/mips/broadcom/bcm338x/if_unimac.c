@@ -153,11 +153,44 @@ unimac_attach(device_t dev)
 	}
 
 	int i, j;
-	for (i = 0; i < 7 ; ++i) {
-		printf("%08x ", i * 0x10);
+	int off;
+	/* BCHP_MBDMA_REG_START */
+	off = 0x0;
+	for (i = 0; i < 4 ; ++i) {
+		printf("%08x ", off + i * 0x10);
 		for (j = 0; j < 4 ; ++j) {
 			printf("%08x ",
-			    bus_read_4(sc->mem, i * 0x10 + j * 4));
+			    bus_read_4(sc->mem, off + i * 0x10 + j * 4));
+		}
+		printf("\n");
+	}
+	/* BCHP_UNIMAC_INTERFACE0_REG_START */
+	off = 0x600 + 0x2000;
+	for (i = 0; i < 4 ; ++i) {
+		printf("%08x ", off + i * 0x10);
+		for (j = 0; j < 4 ; ++j) {
+			printf("%08x ",
+			    bus_read_4(sc->mem, off + i * 0x10 + j * 4));
+		}
+		printf("\n");
+	}
+	/* BCHP_UNIMAC_CORE0_REG_START */
+	off = 0x800 + 0x2000;
+	for (i = 0; i < 4 ; ++i) {
+		printf("%08x ", off + i * 0x10);
+		for (j = 0; j < 4 ; ++j) {
+			printf("%08x ",
+			    bus_read_4(sc->mem, off + i * 0x10 + j * 4));
+		}
+		printf("\n");
+	}
+	/* BCHP_MIB0_REG_START */
+	off = 0xc00 + 0x2000;
+	for (i = 0; i < 4 ; ++i) {
+		printf("%08x ", off + i * 0x10);
+		for (j = 0; j < 4 ; ++j) {
+			printf("%08x ",
+			    bus_read_4(sc->mem, off + i * 0x10 + j * 4));
 		}
 		printf("\n");
 	}
