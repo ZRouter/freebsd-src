@@ -62,6 +62,7 @@ __FBSDID("$FreeBSD$");
 #include <dev/usb/usb_bus.h>
 
 #include <dev/usb/controller/ohci.h>
+#include <dev/usb/controller/ohcireg.h>
 
 #define OHCI_HC_DEVSTR	"BCM338X integrated USB controller"
 
@@ -135,6 +136,20 @@ ohci_obio_attach(device_t self)
 		goto error;
 	}
 
+
+	int i, j;
+	int off;
+	off = 0x0;
+	for (i = 0; i < 8 ; ++i) {
+		printf("%08x ", off + i * 0x10);
+		for (j = 0; j < 4 ; ++j) {
+			printf("%08x ",
+				bus_space_read_4(sc->sc_io_tag, sc->sc_io_hdl,
+				    off + i * 0x10 + j * 4));
+		}
+		printf("\n");
+	}
+return (ENOMEM);
 	err = ohci_init(sc);
 	if (!err) {
 		err = device_probe_and_attach(sc->sc_bus.bdev);
