@@ -51,15 +51,11 @@ __FBSDID("$FreeBSD$");
 #include <mips/broadcom/bcm338x/obiovar.h>
 #include <mips/broadcom/bcm338x/bcm3383reg.h>
 
-#include <mips/atheros/ar531x/ar5315reg.h>
-//#include <mips/atheros/ar531x/ar5312reg.h>
-#include <mips/atheros/ar531x/ar5315_setup.h>
-
 #ifdef BCM338X_OBIO_DEBUG
 #define dprintf printf
 #else 
 #define dprintf(x, arg...)
-#endif  /* AR531X_OBIO_DEBUG */
+#endif  /* BCM338X_OBIO_DEBUG */
 
 static int	obio_activate_resource(device_t, device_t, int, int,
 		    struct resource *);
@@ -155,7 +151,6 @@ obio_attach(device_t dev)
 	/* mask all misc interrupt */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 4 * (12 + 2 * 3), 0);
 
-//	obio_unmask_irq(INTERRUPT_ID_UART0);
 	/* USB init refer bcm93383-platform-devs.c brcm_chip_usb_init() */
 	BCM_WRITE_REG(BCM3383_INTC_BASE + 0x0c, (1 << 7) |
 	    BCM_READ_REG(BCM3383_INTC_BASE + 0x0c));
