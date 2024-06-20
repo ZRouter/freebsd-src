@@ -124,6 +124,14 @@ extern enum bcm338x_soc_type bcm338x_soc;
 #define UART_INT_TXUNDERR		0x0002
 #define UART_INT_DELTAIP		0x0001
 
+#define BCM3383_USB_UBUS_CLK_EN		(1 << 7)
+#define BCM3383_USB_CLK_EN		(1 << 7)
+#define BCM3383_NAND_CLK_EN		(1 << 17)
+#define BCM3383_SFTRST			(1 << 6)
+#define BCM3383_IOC			(1 << 4)
+#define BCM3383_GPIO_USB0_PWRON		(1 << 2)
+#define BCM3383_GPIO_USB1_PWRON		(1 << 4)
+
 #define BCM_READ_REG(reg) \
     *((volatile uint32_t *)MIPS_PHYS_TO_KSEG1((reg)))
  
