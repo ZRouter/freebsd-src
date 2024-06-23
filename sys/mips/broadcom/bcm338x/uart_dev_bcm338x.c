@@ -378,7 +378,7 @@ bcm338x_bus_attach(struct uart_softc *sc)
 	 * Later on (when they're handled), also handle
 	 * RX errors/overflow.
 	 */
-	u->u_ier = (UART_INT_RXFIFONE << 16);
+	u->u_ier = ((UART_INT_RXFIFONE | UART_INT_RXBRK) << 16);
 
 	/* Enable RX interrupts to kick-start things */
 	bcm338x_setreg(bas, 0x10, u->u_ier);
@@ -497,6 +497,9 @@ bcm338x_bus_ipend(struct uart_softc *sc)
 	isr = (isr >> 16) & isr;
 	uart_barrier(bas);
 
+	if (isr & UART_INT_RXBRK) {
+		kdb_break();
+	}
 	/*
 	 * RX ready - notify upper layer.
 	 */
