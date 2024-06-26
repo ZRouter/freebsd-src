@@ -59,52 +59,6 @@ enum bcm338x_soc_type bcm338x_soc;
 
 extern char edata[], end[];
 
-/*
- * Macros to access the system control coprocessor
- */
-
-/* BMIPS5000 */
-
-#define	BMIPS_C0_CONFIG		0
-#define	BMIPS_C0_MODE		1
-#define	BMIPS_C0_ACTION		2
-#define	BMIPS_C0_EDSP		3
-#define	BMIPS_C0_BOOTVEC	4
-#define	BMIPS_C0_SLEEPCOUNT	7
-
-#define	CP0_BCM_CFG_ICSHEN	(0x1 << 31)
-#define	CP0_BCM_CFG_DCSHEN	(0x1 << 30)
-#define	CP0_BCM_CFG_TLBPD	(0x1 << 28)
-#define	CP0_BCM_CFG_CLF		(0x1 << 20)
-
-
-#define __read32_c0_register(source, sel)				\
-({ int __res;								\
-	if (sel == 0)							\
-		__asm__ __volatile__(					\
-			"mfc0\t%0, " #source "\n\t"			\
-			: "=r" (__res));				\
-	else								\
-		__asm__ __volatile__(					\
-			"mfc0\t%0, " #source ", " #sel "\n\t"		\
-			".set\tmips0\n\t"				\
-			: "=r" (__res));				\
-	__res;								\
-})
-
-#define __write32_c0_register(register, sel, value)			\
-do {									\
-	if (sel == 0)							\
-		__asm__ __volatile__(					\
-			"mtc0\t%z0, " #register "\n\t"			\
-			: : "Jr" ((unsigned int)(value)));		\
-	else								\
-		__asm__ __volatile__(					\
-			"mtc0\t%z0, " #register ", " #sel "\n\t"	\
-			".set\tmips0"					\
-			: : "Jr" ((unsigned int)(value)));		\
-} while (0)
-
 void
 bcm338x_detect_sys_type(void)
 {
@@ -179,12 +133,12 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 
 	bcm338x_detect_sys_type();
 	// same as read_c0_brcm_config()
-	int max_cpus  = (((__read32_c0_register($22, BMIPS_C0_CONFIG) >> 6) &
+	int max_cpus  = (((read_c0_brcm_config_0() >> 6) &
 	    0x3) + 1) * 2;
 
-	int cfg  = __read32_c0_register($22, BMIPS_C0_CONFIG);
+	int cfg  = read_c0_brcm_config_0();
 	cfg |= (CP0_BCM_CFG_ICSHEN | CP0_BCM_CFG_DCSHEN);
-	 __write32_c0_register($22, BMIPS_C0_CONFIG, cfg);
+	write_c0_brcm_config_0(cfg);
 
 	/*
 	 * Just wild guess. RedBoot let us down and didn't reported 

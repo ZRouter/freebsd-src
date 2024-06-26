@@ -361,8 +361,12 @@ release_aps(void *dummy __unused)
 		    ipi_irq, INTR_TYPE_MISC | INTR_EXCL, NULL);
 	} else {
 		ipi_irq = platform_ipi_softintr_num();
-		cpu_establish_softintr("ipi", mips_ipi_handler, NULL, NULL,
-		    ipi_irq, INTR_TYPE_MISC | INTR_EXCL, NULL);
+		if (ipi_irq == 0 || ipi_irq == 2)
+			cpu_establish_softintr("ipi0", mips_ipi_handler, NULL,
+			    NULL, 0, INTR_TYPE_MISC | INTR_EXCL, NULL);
+		if (ipi_irq == 1 || ipi_irq == 2)
+			cpu_establish_softintr("ipi1", mips_ipi_handler, NULL,
+			    NULL, 1, INTR_TYPE_MISC | INTR_EXCL, NULL);
 	}
 
 	atomic_store_rel_int(&aps_ready, 1);

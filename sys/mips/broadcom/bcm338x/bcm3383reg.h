@@ -138,4 +138,60 @@ extern enum bcm338x_soc_type bcm338x_soc;
 #define BCM_WRITE_REG(reg, val) \
     *((volatile uint32_t *)MIPS_PHYS_TO_KSEG1((reg))) = (val)
 
+/*
+ * Macros to access the system control coprocessor
+ */
+
+#define	CP0_BCM_CFG_ICSHEN	(0x1 << 31)
+#define	CP0_BCM_CFG_DCSHEN	(0x1 << 30)
+#define	CP0_BCM_CFG_TLBPD	(0x1 << 28)
+#define	CP0_BCM_CFG_CLF		(0x1 << 20)
+
+
+#define __read32_c0_register(source, sel)				\
+({ int __res;								\
+	if (sel == 0)							\
+		__asm__ __volatile__(					\
+			"mfc0\t%0, " #source "\n\t"			\
+			: "=r" (__res));				\
+	else								\
+		__asm__ __volatile__(					\
+			"mfc0\t%0, " #source ", " #sel "\n\t"		\
+			".set\tmips0\n\t"				\
+			: "=r" (__res));				\
+	__res;								\
+})
+
+#define __write32_c0_register(register, sel, value)			\
+do {									\
+	if (sel == 0)							\
+		__asm__ __volatile__(					\
+			"mtc0\t%z0, " #register "\n\t"			\
+			: : "Jr" ((unsigned int)(value)));		\
+	else								\
+		__asm__ __volatile__(					\
+			"mtc0\t%z0, " #register ", " #sel "\n\t"	\
+			".set\tmips0"					\
+			: : "Jr" ((unsigned int)(value)));		\
+} while (0)
+
+/* BMIPS43xx */
+#define read_c0_brcm_config_0()		__read32_c0_register($22, 0)
+#define write_c0_brcm_config_0(val)	__write32_c0_register($22, 0, val)
+
+#define read_c0_brcm_cmt_intr()		__read32_c0_register($22, 1)
+#define write_c0_brcm_cmt_intr(val)	__write32_c0_register($22, 1, val)
+
+#define read_c0_brcm_cmt_ctrl()		__read32_c0_register($22, 2)
+#define write_c0_brcm_cmt_ctrl(val)	__write32_c0_register($22, 2, val)
+
+#define read_c0_brcm_cmt_local()	__read32_c0_register($22, 3)
+#define write_c0_brcm_cmt_local(val)	__write32_c0_register($22, 3, val)
+
+#define read_c0_brcm_config_1()		__read32_c0_register($22, 5)
+#define write_c0_brcm_config_1(val)	__write32_c0_register($22, 5, val)
+
+#define read_c0_brcm_cbr()		__read32_c0_register($22, 6)
+#define write_c0_brcm_cbr(val)		__write32_c0_register($22, 6, val)
+
 #endif

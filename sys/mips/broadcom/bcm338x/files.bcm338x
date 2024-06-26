@@ -20,3 +20,5 @@ mips/broadcom/bcm338x/if_unimac.c		optional unimac
 
 mips/mips/intr_machdep.c			standard
 
+mips/broadcom/bcm338x/bcm338x_mp.c		optional smp
+mips/broadcom/bcm338x/bcm338x_mpboot.S		optional smp
