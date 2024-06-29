@@ -90,7 +90,7 @@ static int	mtk_spi_detach(device_t);
 static int	mtk_spi_wait(struct mtk_spi_softc *);
 static void	mtk_spi_chip_activate(struct mtk_spi_softc *);
 static void	mtk_spi_chip_deactivate(struct mtk_spi_softc *);
-static uint8_t	mtk_spi_txrx(struct mtk_spi_softc *, uint8_t *, int);
+static uint8_t	mtk_spi_txrx(struct mtk_spi_softc *, uint8_t *, int, int);
 static int	mtk_spi_transfer(device_t, device_t, struct spi_command *);
 static phandle_t mtk_spi_get_node(device_t, device_t);
 
@@ -199,8 +199,10 @@ mtk_spi_wait(struct mtk_spi_softc *sc)
 }
 
 static uint8_t
-mtk_spi_txrx(struct mtk_spi_softc *sc, uint8_t *data, int write)
+mtk_spi_txrx(struct mtk_spi_softc *sc, uint8_t *data, int write, int multi)
 {
+	int i, off;
+	uint32_t rdat;
 
 	if (mtk_spi_wait(sc))
 		return (0xff);
@@ -209,7 +211,10 @@ mtk_spi_txrx(struct mtk_spi_softc *sc, uint8_t *data, int write)
 		SPI_WRITE(sc, MTK_SPIOPCODE, (*data));
 		SPI_WRITE(sc, MTK_SPIMOREBUF, (8<<24));
 	} else {
-		SPI_WRITE(sc, MTK_SPIMOREBUF, (8<<12));
+		if (multi)
+			SPI_WRITE(sc, MTK_SPIMOREBUF, (256<<12));
+		else
+			SPI_WRITE(sc, MTK_SPIMOREBUF, (8<<12));
 	}
 
 	SPI_SET_BITS(sc, MTK_SPITRANS, SPISTART);
@@ -218,7 +223,18 @@ mtk_spi_txrx(struct mtk_spi_softc *sc, uint8_t *data, int write)
 		return (0xff);
 
 	if (write == MTK_SPI_READ) {
-		*data = SPI_READ(sc, MTK_SPIDATA) & 0xff;
+		if (multi) {
+			for (i = 0; i < 8; ++i) {
+				off = i * 4;
+				rdat = SPI_READ(sc, MTK_SPIDATA + off);
+				*(data + 0 + off) = rdat & 0xff;
+				*(data + 1 + off) = (rdat >> 8) & 0xff;
+				*(data + 2 + off) = (rdat >> 16) & 0xff;
+				*(data + 3 + off) = (rdat >> 24);
+			}
+		} else {
+			*data = SPI_READ(sc, MTK_SPIDATA) & 0xff;
+		}
 	}
 
 	return (0);
@@ -229,18 +245,28 @@ mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 {
 	struct mtk_spi_softc *sc;
 	uint8_t *buf, byte, *tx_buf;
-	uint32_t cs;
-	int i, sz, error, write = 0;
+	uint32_t cs, clock, mode;
+	int i, sz, error, write = 0, clk, val;
 
 	sc = device_get_softc(dev);
 
 	spibus_get_cs(child, &cs);
+	spibus_get_clock(child, &clock);
+	spibus_get_mode(child, &mode);
 
 	cs &= ~SPIBUS_CS_HIGH;
 
 	if (cs != 0)
 		/* Only 1 CS */
 		return (ENXIO);
+
+	clk = 290 / (clock / 1000000) - 2;
+	if(clk < 0)
+		clk = 0;
+	val = SPI_READ(sc, MTK_SPIMASTER);
+	val &= ~(0xfff << 16);
+	val |= clk << 16;
+	SPI_WRITE(sc, MTK_SPIMASTER, val);
 
         /* There is always a command to transfer. */
         tx_buf = (uint8_t *)(cmd->tx_cmd);
@@ -285,13 +311,13 @@ mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
                         if(i < cmd->tx_cmd_sz) {
 			        byte = tx_buf[i];
         			error = mtk_spi_txrx(sc, &byte,
-		        	    MTK_SPI_WRITE);
+		        	    MTK_SPI_WRITE, 0);
 				if (error)
 					goto mtk_spi_transfer_fail;
 				continue;
                         }
                         error = mtk_spi_txrx(sc, &byte,
-		            MTK_SPI_READ);
+		            MTK_SPI_READ, 0);
 			if (error)
 				goto mtk_spi_transfer_fail;
 			buf[i] = byte;
@@ -308,12 +334,20 @@ mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 		sz = write ? cmd->tx_data_sz : cmd->rx_data_sz;
 
 		for (i = 0; i < sz; i++) {
-			byte = buf[i];
-			error = mtk_spi_txrx(sc, &byte,
-			    write ? MTK_SPI_WRITE : MTK_SPI_READ);
-			if (error)
-				goto mtk_spi_transfer_fail;
-			buf[i] = byte;
+			if (i + 32 <= sz && !write) {
+				error = mtk_spi_txrx(sc, &buf[i],
+				    MTK_SPI_READ, 1);
+				if (error)
+					goto mtk_spi_transfer_fail;
+				i = i + 31;
+			} else {
+				byte = buf[i];
+				error = mtk_spi_txrx(sc, &byte,
+				    write ? MTK_SPI_WRITE : MTK_SPI_READ, 0);
+				if (error)
+					goto mtk_spi_transfer_fail;
+				buf[i] = byte;
+			}
 		}
 	}
 mtk_spi_transfer_fail:
