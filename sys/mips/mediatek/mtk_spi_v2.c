@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD$");
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
+#include <mips/mediatek/mtk_soc.h>
 #include <mips/mediatek/mtk_spi_v2.h>
 #include <dev/flash/mx25lreg.h>
 
@@ -260,7 +261,7 @@ mtk_spi_transfer(device_t dev, device_t child, struct spi_command *cmd)
 		/* Only 1 CS */
 		return (ENXIO);
 
-	clk = 290 / (clock / 1000000) - 2;
+	clk = mtk_soc_get_timerclk() / clock - 2;
 	if(clk < 0)
 		clk = 0;
 	val = SPI_READ(sc, MTK_SPIMASTER);
