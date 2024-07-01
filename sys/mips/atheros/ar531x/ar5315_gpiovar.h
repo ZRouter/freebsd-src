@@ -32,8 +32,6 @@
 #ifndef __AR5315_GPIOVAR_H__
 #define __AR5315_GPIOVAR_H__
 
-#include <sys/timepps.h>
-
 #define GPIO_LOCK(_sc)		mtx_lock(&(_sc)->gpio_mtx)
 #define GPIO_UNLOCK(_sc)	mtx_unlock(&(_sc)->gpio_mtx)
 #define GPIO_LOCK_ASSERT(_sc)	mtx_assert(&(_sc)->gpio_mtx, MA_OWNED)
@@ -67,9 +65,6 @@ struct ar5315_gpio_softc {
 	void			*gpio_ih;
 	int			gpio_npins;
 	struct gpio_pin		*gpio_pins;
-	int			gpio_ppspin;
-	struct pps_state	gpio_pps;
-	uint32_t		gpio_ppsenable;
 };
 
 #endif	/* __AR5315_GPIOVAR_H__ */
