@@ -57,10 +57,7 @@ platform_ipi_send(int cpuid)
 //	printf("=%d.%d,", platform_processor_id(), cpuid);
 
 	reg = mips_rd_cause();
-	if(cpuid == 1)
-		reg |= MIPS_SOFT_INT_MASK_0;
-	else
-		reg |= MIPS_SOFT_INT_MASK_1;
+	reg |= MIPS_SOFT_INT_MASK_0;
 	mips_wr_cause(reg);
 }
 
@@ -72,10 +69,7 @@ platform_ipi_clear(void)
 //	printf("@%d,", platform_processor_id());
 
 	reg = mips_rd_cause();
-	if(platform_processor_id() == 1)
-		reg &= ~(MIPS_SOFT_INT_MASK_0);
-	else
-		reg &= ~(MIPS_SOFT_INT_MASK_1);
+	reg &= ~(MIPS_SOFT_INT_MASK_0);
 	mips_wr_cause(reg);
 }
 
@@ -97,9 +91,9 @@ int
 platform_ipi_softintr_num(void)
 {
 
-	/* use 0 and 1 software interrupt */
+	/* use software interrupt 0 */
 
-	return (2);
+	return (0);
 }
 
 /* call from mpentry in mips/mpboot.S */
@@ -114,7 +108,7 @@ platform_init_ap(int cpuid)
 	/*
 	 * Unmask the ipi interrupts.
 	 */
-	ipi_intr_mask = soft_int_mask(0) | soft_int_mask(1);
+	ipi_intr_mask = soft_int_mask(0);
 	clock_int_mask = hard_int_mask(5);
 	set_intr_mask(ipi_intr_mask | clock_int_mask);
 }
@@ -122,10 +116,10 @@ platform_init_ap(int cpuid)
 void
 platform_cpu_mask(cpuset_t *mask)
 {
-	uint32_t i, m;
+	uint32_t i;
 
 	CPU_ZERO(mask);
-	for (i = 0, m = 1 ; i < BCM338X_MAXCPU; i++, m <<= 1)
+	for (i = 0; i < BCM338X_MAXCPU; ++i)
 		CPU_SET(i, mask);
 }
 

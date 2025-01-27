@@ -140,6 +140,10 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	cfg |= (CP0_BCM_CFG_ICSHEN | CP0_BCM_CFG_DCSHEN);
 	write_c0_brcm_config_0(cfg);
 
+	int reg = read_c0_brcm_cmt_intr();
+	reg |= (1 << 15);	/* CP0_CMT_SIR_0 */
+	write_c0_brcm_cmt_intr(reg);
+
 	/*
 	 * Just wild guess. RedBoot let us down and didn't reported 
 	 * memory size
