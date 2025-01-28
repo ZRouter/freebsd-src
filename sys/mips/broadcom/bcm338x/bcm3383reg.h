@@ -147,6 +147,10 @@ extern enum bcm338x_soc_type bcm338x_soc;
 #define	CP0_BCM_CFG_TLBPD	(0x1 << 28)
 #define	CP0_BCM_CFG_CLF		(0x1 << 20)
 
+#define CP0_CMT_PRIO_TP1	(0x1 << 5)
+#define CP0_CMT_PRIO_TP0	(0x1 << 4)
+
+#define CP0_CMT_SIR_0		(0x1 << 15)
 
 #define __read32_c0_register(source, sel)				\
 ({ int __res;								\

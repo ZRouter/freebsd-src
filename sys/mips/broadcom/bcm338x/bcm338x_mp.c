@@ -109,7 +109,7 @@ platform_init_ap(int cpuid)
 	 * Unmask the ipi interrupts.
 	 */
 	ipi_intr_mask = soft_int_mask(0);
-	clock_int_mask = hard_int_mask(5);
+	clock_int_mask = hard_int_mask(2) | hard_int_mask(5);
 	set_intr_mask(ipi_intr_mask | clock_int_mask);
 }
 
