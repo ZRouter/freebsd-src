@@ -179,7 +179,7 @@ do {									\
 			: : "Jr" ((unsigned int)(value)));		\
 } while (0)
 
-/* BMIPS43xx */
+/* BMIPS4350 and BMIPS4380 */
 #define read_c0_brcm_config_0()		__read32_c0_register($22, 0)
 #define write_c0_brcm_config_0(val)	__write32_c0_register($22, 0, val)
 
