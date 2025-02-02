@@ -140,6 +140,13 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	cfg |= (CP0_BCM_CFG_ICSHEN | CP0_BCM_CFG_DCSHEN);
 	write_c0_brcm_config_0(cfg);
 
+#ifndef SMP
+	uint32_t *raccfg;
+	raccfg = read_c0_brcm_cbr() & 0xfff00000;
+	/* Enable data RAC */
+	*raccfg |= 0xa;
+#endif
+
 	/*
 	 * Just wild guess. RedBoot let us down and didn't reported 
 	 * memory size
