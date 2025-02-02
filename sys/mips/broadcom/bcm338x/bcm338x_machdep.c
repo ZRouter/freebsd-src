@@ -140,16 +140,6 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	cfg |= (CP0_BCM_CFG_ICSHEN | CP0_BCM_CFG_DCSHEN);
 	write_c0_brcm_config_0(cfg);
 
-#ifdef SMP
-	int reg = read_c0_brcm_cmt_ctrl();
-	reg &= ~(CP0_CMT_PRIO_TP0 | CP0_CMT_PRIO_TP1);
-	write_c0_brcm_cmt_ctrl(reg);
-
-	reg = read_c0_brcm_cmt_intr();
-	reg |= CP0_CMT_SIR_0;
-	write_c0_brcm_cmt_intr(reg);
-#endif
-
 	/*
 	 * Just wild guess. RedBoot let us down and didn't reported 
 	 * memory size
@@ -202,6 +192,7 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	platform_counter_freq = 500 * 1000 * 1000;
 	mips_timer_init_params(platform_counter_freq, 1);
 	cninit();
+
 /*
 	init_static_kenv(boot1_env, sizeof(boot1_env));
 
@@ -224,6 +215,11 @@ platform_start(__register_t a0 __unused, __register_t a1 __unused,
 	printf("%08x %08x %08x\n", BCM_READ_REG(BCM3383_PERIPH_BASE + 4),
 	    BCM_READ_REG(BCM3383_PERIPH_BASE + 8),
 	    BCM_READ_REG(BCM3383_PERIPH_BASE + 12));
+	/* Core Base Register */
+	printf("CBR(CP0,22,6): %x\n", read_c0_brcm_cbr());
+	int *cbr = read_c0_brcm_cbr() & 0xfff00000;
+	for (i = 0; i < 3; ++i)
+		printf("%08x: %08x\n", cbr + i, *(cbr + i));
 
 	int clk = BCM_READ_REG(BCM3383_PERIPH_BASE + 4);
 	BCM_WRITE_REG(BCM3383_PERIPH_BASE + 4, clk | 0x40);   // Unimac0ClkEn

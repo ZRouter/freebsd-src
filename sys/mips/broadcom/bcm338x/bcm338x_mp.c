@@ -104,6 +104,22 @@ platform_init_ap(int cpuid)
 	uint32_t clock_int_mask;
 	uint32_t ipi_intr_mask;
 	int i;
+	uint32_t *raccfg;
+
+	int reg = read_c0_brcm_cmt_ctrl();
+	reg &= ~(CP0_CMT_PRIO_TP0 | CP0_CMT_PRIO_TP1);
+	write_c0_brcm_cmt_ctrl(reg);
+
+	reg = read_c0_brcm_cmt_intr();
+	reg |= CP0_CMT_SIR_0;
+	write_c0_brcm_cmt_intr(reg);
+
+//	raccfg = read_c0_brcm_cbr() & 0xfff00000;
+	raccfg = 0xff400000;
+	if (cpuid == 1)
+		raccfg += 2;
+	/* Enable data RAC */
+	*raccfg |= 0xa;
 
 	/*
 	 * Unmask the ipi interrupts.
