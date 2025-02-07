@@ -61,6 +61,7 @@ __FBSDID("$FreeBSD$");
 
 #define MTK_INTPOL		0x0100
 #define MTK_INTTRIG		0x0180
+#define MTK_WEDGE		0x0280
 #define MTK_INTDIS		0x0300
 #define MTK_INTENA		0x0380
 #define MTK_INTMASK		0x0400
@@ -102,6 +103,8 @@ static struct ofw_compat_data compat_data[] = {
 	{ "mti,gic",	1 },
 	{ NULL,		0 }
 };
+
+static struct mtk_gic_softc *mtk_gic_sc = NULL;
 
 #define READ4(_sc, _reg)	bus_read_4((_sc)->gic_res[0], (_reg))
 #define WRITE4(_sc, _reg, _val)	bus_write_4((_sc)->gic_res[0], (_reg), (_val))
@@ -178,6 +181,8 @@ mtk_gic_attach(device_t dev)
 		return (ENXIO);
 	}
 
+	mtk_gic_sc = sc;
+
 	sc->gic_dev = dev;
 
 	/* Initialize mutex */
@@ -194,6 +199,9 @@ mtk_gic_attach(device_t dev)
 
 	/* All interrupts are of positive polarity */
 	WRITE4(sc, MTK_INTPOL, 0xFFFFFFFF);
+
+	/* Enable IPI */
+	WRITE4(sc, MTK_INTENA + 4, 0xff000000);
 
 	/*
 	 * Route all interrupts to pin 0 on VPE 0;
@@ -333,11 +341,26 @@ mtk_gic_init_secondary(device_t dev)
 {
 }
 
+#ifdef SMP
 static void
 mtk_gic_ipi_send(device_t dev, struct intr_irqsrc *isrc, cpuset_t cpus)
 {
+	struct mtk_gic_softc *sc = device_get_softc(dev);
 }
 #endif
+
+void send_ipi(unsigned int intr)
+{
+
+	WRITE4(mtk_gic_sc, MTK_WEDGE, 0x80000000 | intr);
+}
+#endif
+
+void clear_ipi(unsigned int intr)
+{
+
+	WRITE4(mtk_gic_sc, MTK_WEDGE, intr);
+}
 
 static device_method_t mtk_gic_methods[] = {
 	/* Device interface */
@@ -351,9 +374,12 @@ static device_method_t mtk_gic_methods[] = {
 	DEVMETHOD(pic_post_ithread,	mtk_gic_post_ithread),
 	DEVMETHOD(pic_pre_ithread,	mtk_gic_pre_ithread),
 #ifdef SMP
+/*
+
 	DEVMETHOD(pic_bind,		mtk_gic_bind),
 	DEVMETHOD(pic_init_secondary,	mtk_gic_init_secondary),
 	DEVMETHOD(pic_ipi_send,		mtk_gic_ipi_send),
+*/
 #endif
 	{ 0, 0 }
 };

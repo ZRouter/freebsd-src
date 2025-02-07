@@ -25,6 +25,8 @@ mips/mediatek/mtk_gpio_v2.c 		optional gpio mtk_gpio_v2
 #mips/mediatek/mtk_mmc.c 		optional mmc
 mips/mediatek/mtk_iic.c 		optional iic mtk_iic
 mips/mediatek/mtk_gdma.c 		optional mtk_gdma
+mips/mediatek/mtk_mp.c 			optional smp
+mips/mediatek/mtk_asm.S 		optional smp
 
 mips/mediatek/mtk_wdog_v1.c 		optional mtk_wdog_v1
 
