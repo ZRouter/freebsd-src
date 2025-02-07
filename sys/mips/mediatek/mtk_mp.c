@@ -143,8 +143,6 @@ platform_smp_topo(void)
 	return (smp_topo_none());
 }
 
-void mpentry();
-
 #define CPULAUNCH	0x00000f00
 #define LAUNCHSIZE	32
 
