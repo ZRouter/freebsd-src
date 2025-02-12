@@ -52,6 +52,9 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/user.h>
+#ifdef SMP
+#include <sys/smp.h>
+#endif
 
 #include <vm/vm.h>
 #include <vm/vm_object.h>
@@ -102,6 +105,11 @@ mips_init(void)
 	printf("entry: mips_init()\n");
 
 	bootverbose = 1;
+
+#ifdef SMP
+	smp_threads_per_core = 2;
+	mp_ncores = 2;
+#endif
 
 	for (i = 0; i < 10; i++)
 		phys_avail[i] = 0;

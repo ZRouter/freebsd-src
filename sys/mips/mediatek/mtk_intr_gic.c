@@ -207,8 +207,10 @@ mtk_gic_attach(device_t dev)
 	 * Route all interrupts to pin 0 on VPE 0;
 	 */
 	for (i = 0; i < 32; i++) {
-		WRITE4(sc, MTK_MAPPIN(i), MTK_PIN_BITS(0));
-		WRITE4(sc, MTK_MAPVPE(i, 0), MTK_VPE_BITS(0));
+		if (i != 5) {
+			WRITE4(sc, MTK_MAPPIN(i), MTK_PIN_BITS(0));
+			WRITE4(sc, MTK_MAPVPE(i, 0), MTK_VPE_BITS(0));
+		}
 	}
 
 	/* Register the interrupts */

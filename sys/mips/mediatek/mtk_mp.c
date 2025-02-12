@@ -113,10 +113,16 @@ platform_init_ap(int cpuid)
 	/*
 	 * Unmask the clock and ipi interrupts.
 	 */
-	ipi_intr_mask = hard_int_mask(platform_ipi_hardintr_num());
-	/* only use last thread clock */
-	clock_int_mask = hard_int_mask(5);
-	set_intr_mask(ipi_intr_mask | clock_int_mask);
+	if (cpuid == 0) {
+		ipi_intr_mask = hard_int_mask(platform_ipi_hardintr_num());
+		clock_int_mask = hard_int_mask(5);
+		clock_int_mask |= hard_int_mask(0);
+		set_intr_mask(ipi_intr_mask | clock_int_mask);
+	} else {
+		ipi_intr_mask = hard_int_mask(platform_ipi_hardintr_num());
+		clock_int_mask = hard_int_mask(1);
+		set_intr_mask(ipi_intr_mask | clock_int_mask);
+	}
 
 	mips_wbflush();
 }
@@ -126,11 +132,7 @@ platform_cpu_mask(cpuset_t *mask)
 {
 	uint32_t i, ncpus, reg;
 
-/*
-	reg = mftc0(0, 2);
-	ncpus = ((reg & MVPCONF0_PVPE_MASK) >> MVPCONF0_PVPE_SHIFT) + 1;
-*/
-	ncpus = 4;
+	ncpus = smp_threads_per_core * mp_ncores;
 
 	CPU_ZERO(mask);
 	for (i = 0; i < ncpus; i++)
