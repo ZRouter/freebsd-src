@@ -200,8 +200,10 @@ mtk_gic_attach(device_t dev)
 	/* All interrupts are of positive polarity */
 	WRITE4(sc, MTK_INTPOL, 0xFFFFFFFF);
 
-	/* Enable IPI */
+#ifdef SMP
+	/* Enable IPI (GIC INT56-63) */
 	WRITE4(sc, MTK_INTENA + 4, 0xff000000);
+#endif
 
 	/*
 	 * Route all interrupts to pin 0 on VPE 0;
