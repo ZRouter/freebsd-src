@@ -209,10 +209,10 @@ mtk_gic_attach(device_t dev)
 #define VPE_OTHER_SECTION	0xc000
 #define GIC_VPE_SMASK		0x0010
 
-	/* Enable each VPE's compare interrupt */
+	/* Enable each VPE's CP0 Count/Compare Timer interrupt */
 	for (i = 0;i < 4; ++i) {
 		WRITE4(sc, VPE_LOCAL_SECTION + GIC_VPE_OTHER_ADDR, i);
-		WRITE4(sc, VPE_OTHER_SECTION + GIC_VPE_SMASK, 1 << 1);
+		WRITE4(sc, VPE_OTHER_SECTION + GIC_VPE_SMASK, 1 << 2);
 	}
 #endif
 
