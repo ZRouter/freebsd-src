@@ -207,7 +207,8 @@ mtk_gic_attach(device_t dev)
 #define VPE_LOCAL_SECTION	0x8000
 #define GIC_VPE_OTHER_ADDR	0x0080
 #define VPE_OTHER_SECTION	0xc000
-#define GIC_VPE_SMASK		0x0010
+#define GIC_VPE_RMASK		0x000c	/* Disable */
+#define GIC_VPE_SMASK		0x0010	/* Enable */
 
 	/* Enable each VPE's CP0 Count/Compare Timer interrupt
 	   This is default. No effect. */
