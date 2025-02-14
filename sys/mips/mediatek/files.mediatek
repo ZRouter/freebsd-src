@@ -34,8 +34,7 @@ mips/mediatek/mtk_wdog_v1.c 		optional mtk_wdog_v1
 dev/rt/if_rt.c 				optional rt
 
 # Standard MIPS ticker
-#mips/mips/tick.c 			standard
-mips/mediatek/tick.c 			standard
+mips/mips/tick.c 			standard
 
 # Temporary Reset if
 mips/mediatek/fdt_reset.c 		standard

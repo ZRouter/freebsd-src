@@ -203,6 +203,17 @@ mtk_gic_attach(device_t dev)
 #ifdef SMP
 	/* Enable IPI (GIC INT56-63) */
 	WRITE4(sc, MTK_INTENA + 4, 0xff000000);
+
+#define VPE_LOCAL_SECTION	0x8000
+#define GIC_VPE_OTHER_ADDR	0x0080
+#define VPE_OTHER_SECTION	0xc000
+#define GIC_VPE_SMASK		0x0010
+
+	/* Enable each VPE's compare interrupt */
+	for (i = 0;i < 4; ++i) {
+		WRITE4(sc, VPE_LOCAL_SECTION + GIC_VPE_OTHER_ADDR, i);
+		WRITE4(sc, VPE_OTHER_SECTION + GIC_VPE_SMASK, 1 << 1);
+	}
 #endif
 
 	/*

@@ -120,7 +120,7 @@ platform_init_ap(int cpuid)
 		set_intr_mask(ipi_intr_mask | clock_int_mask);
 	} else {
 		ipi_intr_mask = hard_int_mask(platform_ipi_hardintr_num());
-		clock_int_mask = hard_int_mask(1);
+		clock_int_mask = hard_int_mask(5);
 		set_intr_mask(ipi_intr_mask | clock_int_mask);
 	}
 
