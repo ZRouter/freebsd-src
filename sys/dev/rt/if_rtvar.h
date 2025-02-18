@@ -69,8 +69,9 @@
 #define	RT_SOFTC_TX_RING_ASSERT_LOCKED(ring)	\
 		    mtx_assert(&(ring)->lock, MA_OWNED)
 
+/* Ralink SOC have 4 TX ring but only use one */
 #define	RT_SOFTC_TX_RING_COUNT		4
-#define	RT_SOFTC_RX_RING_COUNT		4
+#define	RT_SOFTC_RX_RING_COUNT		2
 
 #ifndef IF_RT_RING_DATA_COUNT
 #define	IF_RT_RING_DATA_COUNT	128
@@ -184,10 +185,6 @@ struct rt_softc_tx_ring
 	int desc_queued;
 	int desc_cur;
 	int desc_next;
-	bus_dma_tag_t seg0_dma_tag;
-	bus_dmamap_t seg0_dma_map;
-	bus_addr_t seg0_phys_addr;
-	uint8_t *seg0;
 	bus_dma_tag_t data_dma_tag;
 	struct rt_softc_tx_data data[RT_SOFTC_TX_RING_DATA_COUNT];
 	int data_queued;

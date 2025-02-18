@@ -78,11 +78,6 @@ __FBSDID("$FreeBSD$");
 #include "mdio_if.h"
 #endif
 
-#if 0
-#include <mips/rt305x/rt305x_sysctlvar.h>
-#include <mips/rt305x/rt305xreg.h>
-#endif
-
 #ifdef IF_RT_PHY_SUPPORT
 #include "miibus_if.h"
 #endif
@@ -91,8 +86,6 @@ __FBSDID("$FreeBSD$");
  * Defines and macros
  */
 #define	RT_MAX_AGG_SIZE			3840
-
-#define	RT_TX_DATA_SEG0_SIZE		MJUMPAGESIZE
 
 #define	RT_MS(_v, _f)			(((_v) & _f) >> _f##_S)
 #define	RT_SM(_v, _f)			(((_v) << _f##_S) & _f)
@@ -1152,8 +1145,6 @@ rt_tx_data(struct rt_softc *sc, struct mbuf *m, int qid)
 	    (int) dma_seg[3].ds_len,
 	    (int) dma_seg[4].ds_len);
 
-	bus_dmamap_sync(ring->seg0_dma_tag, ring->seg0_dma_map,
-		BUS_DMASYNC_PREWRITE);
 	bus_dmamap_sync(ring->data_dma_tag, data->dma_map,
 		BUS_DMASYNC_PREWRITE);
 	bus_dmamap_sync(ring->desc_dma_tag, ring->desc_dma_map,
@@ -2400,34 +2391,6 @@ rt_alloc_tx_ring(struct rt_softc *sc, struct rt_softc_tx_ring *ring, int qid)
 
 	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), PAGE_SIZE, 0,
 	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
-	    RT_SOFTC_TX_RING_DATA_COUNT * RT_TX_DATA_SEG0_SIZE, 1,
-	    RT_SOFTC_TX_RING_DATA_COUNT * RT_TX_DATA_SEG0_SIZE,
-	    0, NULL, NULL, &ring->seg0_dma_tag);
-	if (error != 0) {
-		device_printf(sc->dev,
-		    "could not create Tx seg0 DMA tag\n");
-		goto fail;
-	}
-
-	error = bus_dmamem_alloc(ring->seg0_dma_tag, (void **) &ring->seg0,
-	    BUS_DMA_NOWAIT | BUS_DMA_ZERO, &ring->seg0_dma_map);
-	if (error != 0) {
-		device_printf(sc->dev,
-		    "could not allocate Tx seg0 DMA memory\n");
-		goto fail;
-	}
-
-	error = bus_dmamap_load(ring->seg0_dma_tag, ring->seg0_dma_map,
-	    ring->seg0,
-	    RT_SOFTC_TX_RING_DATA_COUNT * RT_TX_DATA_SEG0_SIZE,
-	    rt_dma_map_addr, &ring->seg0_phys_addr, 0);
-	if (error != 0) {
-		device_printf(sc->dev, "could not load Tx seg0 DMA map\n");
-		goto fail;
-	}
-
-	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), PAGE_SIZE, 0,
-	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
 	    MJUMPAGESIZE, RT_SOFTC_MAX_SCATTER, MJUMPAGESIZE, 0, NULL, NULL,
 	    &ring->data_dma_tag);
 	if (error != 0) {
@@ -2484,9 +2447,6 @@ rt_reset_tx_ring(struct rt_softc *sc, struct rt_softc_tx_ring *ring)
 	bus_dmamap_sync(ring->desc_dma_tag, ring->desc_dma_map,
 		BUS_DMASYNC_PREWRITE);
 
-	bus_dmamap_sync(ring->seg0_dma_tag, ring->seg0_dma_map,
-		BUS_DMASYNC_PREWRITE);
-
 	for (i = 0; i < RT_SOFTC_TX_RING_DATA_COUNT; i++) {
 		data = &ring->data[i];
 
@@ -2523,17 +2483,6 @@ rt_free_tx_ring(struct rt_softc *sc, struct rt_softc_tx_ring *ring)
 
 	if (ring->desc_dma_tag != NULL)
 		bus_dma_tag_destroy(ring->desc_dma_tag);
-
-	if (ring->seg0 != NULL) {
-		bus_dmamap_sync(ring->seg0_dma_tag, ring->seg0_dma_map,
-			BUS_DMASYNC_POSTWRITE);
-		bus_dmamap_unload(ring->seg0_dma_tag, ring->seg0_dma_map);
-		bus_dmamem_free(ring->seg0_dma_tag, ring->seg0,
-			ring->seg0_dma_map);
-	}
-
-	if (ring->seg0_dma_tag != NULL)
-		bus_dma_tag_destroy(ring->seg0_dma_tag);
 
 	for (i = 0; i < RT_SOFTC_TX_RING_DATA_COUNT; i++) {
 		data = &ring->data[i];
