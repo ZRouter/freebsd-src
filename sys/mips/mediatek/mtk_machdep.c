@@ -88,6 +88,10 @@ extern int	*edata;
 extern int	*end;
 static char 	boot1_env[0x1000];
 
+#ifdef SMP
+int mtk_get_ncores(void);
+#endif
+
 void
 platform_cpu_init()
 {
@@ -108,7 +112,7 @@ mips_init(void)
 
 #ifdef SMP
 	smp_threads_per_core = 2;
-	mp_ncores = 2;
+	mp_ncores = mtk_get_ncores();
 #endif
 
 	for (i = 0; i < 10; i++)

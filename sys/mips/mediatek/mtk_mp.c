@@ -153,6 +153,7 @@ platform_smp_topo(void)
 #define LAUNCH_PC	0
 #define LAUNCH_FLAGS	7
 
+#define LAUNCH_FREADY	1
 #define LAUNCH_FGO	2
 
 int
@@ -170,4 +171,16 @@ platform_start_ap(int cpuid)
 	wmb();
 
 	return (0);
+}
+
+int
+mtk_get_ncores(void)
+{
+	uint32_t *launch;
+	uint32_t ncore;
+
+	launch = MIPS_PHYS_TO_KSEG0(CPULAUNCH + 2 * LAUNCHSIZE);
+	ncore = *(launch + LAUNCH_FLAGS) & LAUNCH_FREADY ? 2 : 1;
+
+	return ncore;
 }
