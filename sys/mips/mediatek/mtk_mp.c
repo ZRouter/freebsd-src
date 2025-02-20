@@ -117,7 +117,6 @@ platform_init_ap(int cpuid)
 		ipi_intr_mask = hard_int_mask(platform_ipi_hardintr_num());
 		clock_int_mask = hard_int_mask(5);
 		clock_int_mask |= hard_int_mask(0);
-		clock_int_mask |= hard_int_mask(3);
 		set_intr_mask(ipi_intr_mask | clock_int_mask);
 	} else {
 		ipi_intr_mask = hard_int_mask(platform_ipi_hardintr_num());
