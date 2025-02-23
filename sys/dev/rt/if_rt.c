@@ -1214,6 +1214,8 @@ rt_start(struct ifnet *ifp)
 		RT_SOFTC_TX_RING_UNLOCK(&sc->tx_ring[qid]);
 		sc->tx_timer = RT_TX_WATCHDOG_TIMEOUT;
 		callout_reset(&sc->tx_watchdog_ch, hz, rt_tx_watchdog, sc);
+
+		ETHER_BPF_MTAP(ifp, m);
 	}
 }
 
