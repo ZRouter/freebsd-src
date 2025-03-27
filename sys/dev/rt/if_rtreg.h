@@ -234,6 +234,7 @@
 #define RT5350_PDMA_BASE 0x0800
 #define	PDMA_GLO_CFG	    0x00
 #define RT5350_PDMA_GLO_CFG 0x204
+#define	    FE_RX_2B_OFFSET	(1<<31)
 #define	    FE_TX_WB_DDONE	(1<<6)
 #define	    FE_DMA_BT_SIZE4	(0<<4)
 #define	    FE_DMA_BT_SIZE8	(1<<4)

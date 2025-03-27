@@ -866,7 +866,7 @@ rt_init_locked(void *priv)
 	tmp = FE_TX_WB_DDONE | FE_DMA_BT_SIZE16 | FE_RX_DMA_EN | FE_TX_DMA_EN;
 	if (sc->rt_chipid == RT_CHIPID_MT7620 ||
 	    sc->rt_chipid == RT_CHIPID_MT7621)
-		tmp |= (1<<31);
+		tmp |= FE_RX_2B_OFFSET;
 	RT_WRITE(sc, sc->pdma_glo_cfg, tmp);
 
 	/* disable interrupts mitigation */
