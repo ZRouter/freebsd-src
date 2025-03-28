@@ -478,6 +478,20 @@ rt_attach(device_t dev)
 	if (sc->rt_chipid == RT_CHIPID_RT3883)
 		RT_WRITE(sc, MDIO_CFG, MDIO_2880_GIGA_INIT);
 
+	/* Create parent DMA tag. */
+	error = bus_dma_tag_create(
+	    bus_get_dma_tag(sc->dev),	/* parent */
+	    1, 0,			/* alignment, boundary */
+	    BUS_SPACE_MAXADDR_32BIT,	/* lowaddr */
+	    BUS_SPACE_MAXADDR,		/* highaddr */
+	    NULL, NULL,			/* filter, filterarg */
+	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsize */
+	    0,				/* nsegments */
+	    BUS_SPACE_MAXSIZE_32BIT,	/* maxsegsize */
+	    0,				/* flags */
+	    NULL, NULL,			/* lockfunc, lockarg */
+	    &sc->rt_parent_tag);
+
 	/* allocate Tx and Rx rings */
 	for (i = 0; i < RT_SOFTC_TX_RING_COUNT; i++) {
 		error = rt_alloc_tx_ring(sc, &sc->tx_ring[i], i);
@@ -2194,8 +2208,9 @@ rt_alloc_rx_ring(struct rt_softc *sc, struct rt_softc_rx_ring *ring, int qid)
 	bus_dma_segment_t segs[1];
 	int i, nsegs, error;
 
-	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), PAGE_SIZE, 0,
-		BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
+	error = bus_dma_tag_create(sc->rt_parent_tag,
+		sizeof(struct rt_rxdesc), 0,
+		BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR, NULL, NULL,
 		RT_SOFTC_RX_RING_DATA_COUNT * sizeof(struct rt_rxdesc), 1,
 		RT_SOFTC_RX_RING_DATA_COUNT * sizeof(struct rt_rxdesc),
 		0, NULL, NULL, &ring->desc_dma_tag);
@@ -2222,10 +2237,10 @@ rt_alloc_rx_ring(struct rt_softc *sc, struct rt_softc_rx_ring *ring, int qid)
 		goto fail;
 	}
 
-	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), PAGE_SIZE, 0,
-	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
-		MJUMPAGESIZE, 1, MJUMPAGESIZE, 0, NULL, NULL,
-		&ring->data_dma_tag);
+	error = bus_dma_tag_create(sc->rt_parent_tag, 1, 0,
+	    BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR, NULL, NULL,
+	    MCLBYTES, RT_SOFTC_MAX_SCATTER, MCLBYTES, 0, NULL, NULL,
+	    &ring->data_dma_tag);
 	if (error != 0)	{
 		device_printf(sc->dev,
 		    "could not create Rx data DMA tag\n");
@@ -2359,11 +2374,12 @@ rt_alloc_tx_ring(struct rt_softc *sc, struct rt_softc_tx_ring *ring, int qid)
 
 	mtx_init(&ring->lock, device_get_nameunit(sc->dev), NULL, MTX_DEF);
 
-	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), PAGE_SIZE, 0,
-		BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
-		RT_SOFTC_TX_RING_DESC_COUNT * sizeof(struct rt_txdesc), 1,
-		RT_SOFTC_TX_RING_DESC_COUNT * sizeof(struct rt_txdesc),
-		0, NULL, NULL, &ring->desc_dma_tag);
+	error = bus_dma_tag_create(sc->rt_parent_tag,
+	    sizeof(struct rt_txdesc), 0,
+	    BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR, NULL, NULL,
+	    RT_SOFTC_TX_RING_DESC_COUNT * sizeof(struct rt_txdesc), 1,
+	    RT_SOFTC_TX_RING_DESC_COUNT * sizeof(struct rt_txdesc),
+	    0, NULL, NULL, &ring->desc_dma_tag);
 	if (error != 0) {
 		device_printf(sc->dev,
 		    "could not create Tx desc DMA tag\n");
@@ -2391,9 +2407,10 @@ rt_alloc_tx_ring(struct rt_softc *sc, struct rt_softc_tx_ring *ring, int qid)
 	ring->desc_cur = 0;
 	ring->desc_next = 0;
 
-	error = bus_dma_tag_create(bus_get_dma_tag(sc->dev), PAGE_SIZE, 0,
-	    BUS_SPACE_MAXADDR_32BIT, BUS_SPACE_MAXADDR, NULL, NULL,
-	    MJUMPAGESIZE, RT_SOFTC_MAX_SCATTER, MJUMPAGESIZE, 0, NULL, NULL,
+	error = bus_dma_tag_create(sc->rt_parent_tag, 1, 0,
+	    BUS_SPACE_MAXADDR, BUS_SPACE_MAXADDR, NULL, NULL,
+	    MCLBYTES * RT_SOFTC_MAX_SCATTER, RT_SOFTC_MAX_SCATTER,
+	    MCLBYTES, 0, NULL, NULL,
 	    &ring->data_dma_tag);
 	if (error != 0) {
 		device_printf(sc->dev,

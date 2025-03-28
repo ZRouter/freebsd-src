@@ -207,6 +207,7 @@ struct rt_softc
 
 	bus_space_tag_t	 bst;
 	bus_space_handle_t bsh;
+	bus_dma_tag_t	 rt_parent_tag;
 
 	struct ifnet	*ifp;
 	int 		 if_flags;
