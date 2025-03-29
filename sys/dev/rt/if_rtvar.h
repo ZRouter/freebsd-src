@@ -69,8 +69,8 @@
 #define	RT_SOFTC_TX_RING_ASSERT_LOCKED(ring)	\
 		    mtx_assert(&(ring)->lock, MA_OWNED)
 
-/* Ralink SOC have 4 TX ring but only use one */
-#define	RT_SOFTC_TX_RING_COUNT		4
+/* Ralink SOC have 4 TX ring (QOS) but only use one */
+#define	RT_SOFTC_TX_RING_COUNT		1
 #define	RT_SOFTC_RX_RING_COUNT		2
 
 #ifndef IF_RT_RING_DATA_COUNT
@@ -81,7 +81,7 @@
 
 #define	RT_SOFTC_MAX_SCATTER		10
 
-#define	RT_SOFTC_TX_RING_DATA_COUNT	(IF_RT_RING_DATA_COUNT/4)
+#define	RT_SOFTC_TX_RING_DATA_COUNT	IF_RT_RING_DATA_COUNT
 #define	RT_SOFTC_TX_RING_DESC_COUNT				\
 	(RT_SOFTC_TX_RING_DATA_COUNT * RT_SOFTC_MAX_SCATTER)
 

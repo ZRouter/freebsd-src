@@ -527,10 +527,9 @@ rt_attach(device_t dev)
 	ifp->if_init = rt_init;
 	ifp->if_ioctl = rt_ioctl;
 	ifp->if_start = rt_start;
-#define	RT_TX_QLEN	256
 
-	IFQ_SET_MAXLEN(&ifp->if_snd, RT_TX_QLEN);
-	ifp->if_snd.ifq_drv_maxlen = RT_TX_QLEN;
+	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	ifp->if_snd.ifq_drv_maxlen = ifqmaxlen;
 	IFQ_SET_READY(&ifp->if_snd);
 
 #ifdef IF_RT_PHY_SUPPORT
@@ -1051,7 +1050,7 @@ rt_tx_data(struct rt_softc *sc, struct mbuf *m, int qid)
 	data = &ring->data[ring->data_cur];
 
 	error = bus_dmamap_load_mbuf_sg(ring->data_dma_tag, data->dma_map, m,
-	    dma_seg, &ndmasegs, 0);
+	    dma_seg, &ndmasegs, BUS_DMA_NOWAIT);
 	if (error != 0)	{
 		/* too many fragments, linearize */
 
@@ -1887,15 +1886,14 @@ rt_rx_eof(struct rt_softc *sc, struct rt_softc_rx_ring *ring, int limit)
 
 		nframes++;
 
-		mnew = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR,
-		    MJUMPAGESIZE);
+		mnew = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (mnew == NULL) {
 			sc->rx_mbuf_alloc_errors++;
 			if_inc_counter(ifp, IFCOUNTER_IERRORS, 1);
 			goto skip;
 		}
 
-		mnew->m_len = mnew->m_pkthdr.len = MJUMPAGESIZE;
+		mnew->m_len = mnew->m_pkthdr.len = MCLBYTES;
 
 		error = bus_dmamap_load_mbuf_sg(ring->data_dma_tag,
 		    ring->spare_dma_map, mnew, segs, &nsegs, BUS_DMA_NOWAIT);
@@ -2010,6 +2008,9 @@ rt_tx_eof(struct rt_softc *sc, struct rt_softc_tx_ring *ring)
 	ndescs = 0;
 	nframes = 0;
 
+	bus_dmamap_sync(ring->desc_dma_tag, ring->desc_dma_map,
+		BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
+
 	for (;;) {
 		index = RT_READ(sc, sc->tx_dtx_idx[ring->qid]);
 		if (ring->desc_next == index)
@@ -2018,9 +2019,6 @@ rt_tx_eof(struct rt_softc *sc, struct rt_softc_tx_ring *ring)
 		ndescs++;
 
 		desc = &ring->desc[ring->desc_next];
-
-		bus_dmamap_sync(ring->desc_dma_tag, ring->desc_dma_map,
-			BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE);
 
 		if (desc->sdl0 & htole16(RT_TXDESC_SDL0_LASTSEG) ||
 			desc->sdl1 & htole16(RT_TXDESC_SDL1_LASTSEG)) {
@@ -2042,20 +2040,25 @@ rt_tx_eof(struct rt_softc *sc, struct rt_softc_tx_ring *ring)
 			ring->data_queued--;
 			ring->data_next = (ring->data_next + 1) %
 			    RT_SOFTC_TX_RING_DATA_COUNT;
+			ring->desc_queued--;
+			ring->desc_next = (ring->desc_next + 1) %
+			    RT_SOFTC_TX_RING_DESC_COUNT;
+			RT_SOFTC_TX_RING_UNLOCK(ring);
+		} else {
+			RT_SOFTC_TX_RING_LOCK(ring);
+			ring->desc_queued--;
+			ring->desc_next = (ring->desc_next + 1) %
+			    RT_SOFTC_TX_RING_DESC_COUNT;
 			RT_SOFTC_TX_RING_UNLOCK(ring);
 		}
 
 		desc->sdl0 &= ~htole16(RT_TXDESC_SDL0_DDONE);
 
-		bus_dmamap_sync(ring->desc_dma_tag, ring->desc_dma_map,
-			BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
-
-		RT_SOFTC_TX_RING_LOCK(ring);
-		ring->desc_queued--;
-		ring->desc_next = (ring->desc_next + 1) %
-		    RT_SOFTC_TX_RING_DESC_COUNT;
-		RT_SOFTC_TX_RING_UNLOCK(ring);
 	}
+
+	if(ndescs)
+		bus_dmamap_sync(ring->desc_dma_tag, ring->desc_dma_map,
+		    BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE);
 
 	RT_DPRINTF(sc, RT_DEBUG_TX,
 	    "Tx eof: qid=%d, ndescs=%d, nframes=%d\n", ring->qid, ndescs,
@@ -2259,15 +2262,14 @@ rt_alloc_rx_ring(struct rt_softc *sc, struct rt_softc_rx_ring *ring, int qid)
 			goto fail;
 		}
 
-		data->m = m_getjcl(M_NOWAIT, MT_DATA, M_PKTHDR,
-		    MJUMPAGESIZE);
+		data->m = m_getcl(M_NOWAIT, MT_DATA, M_PKTHDR);
 		if (data->m == NULL) {
 			device_printf(sc->dev, "could not allocate Rx mbuf\n");
 			error = ENOMEM;
 			goto fail;
 		}
 
-		data->m->m_len = data->m->m_pkthdr.len = MJUMPAGESIZE;
+		data->m->m_len = data->m->m_pkthdr.len = MCLBYTES;
 
 		error = bus_dmamap_load_mbuf_sg(ring->data_dma_tag,
 		    data->dma_map, data->m, segs, &nsegs, BUS_DMA_NOWAIT);
