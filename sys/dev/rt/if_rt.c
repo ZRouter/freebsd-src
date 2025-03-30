@@ -1125,7 +1125,7 @@ rt_tx_data(struct rt_softc *sc, struct mbuf *m, int qid)
 			desc->vid = 0;
 			desc->pppoe = 0;
 			desc->qn = 0;
-			desc->dst = 2;
+			desc->dst = TXDSCR_DST_PORT_GDMA2;
 		}
 
 		desc->sdp0 = htole32(dma_seg[i].ds_addr);
