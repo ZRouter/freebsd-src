@@ -2576,17 +2576,23 @@ rt_sysctl_attach(struct rt_softc *sc)
 	    "rx_delay_interrupts", CTLFLAG_RD, &sc->rx_delay_interrupts,
 	    "Rx delay interrupts");
 
+#if RT_SOFTC_TX_RING_COUNT > 3
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ3_interrupts", CTLFLAG_RD, &sc->tx_interrupts[3],
 	    "Tx AC3 interrupts");
+#endif
 
+#if RT_SOFTC_TX_RING_COUNT > 2
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ2_interrupts", CTLFLAG_RD, &sc->tx_interrupts[2],
 	    "Tx AC2 interrupts");
+#endif
 
+#if RT_SOFTC_TX_RING_COUNT > 1
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ1_interrupts", CTLFLAG_RD, &sc->tx_interrupts[1],
 	    "Tx AC1 interrupts");
+#endif
 
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ0_interrupts", CTLFLAG_RD, &sc->tx_interrupts[0],
@@ -2596,6 +2602,7 @@ rt_sysctl_attach(struct rt_softc *sc)
 	    "tx_delay_interrupts", CTLFLAG_RD, &sc->tx_delay_interrupts,
 	    "Tx delay interrupts");
 
+#if RT_SOFTC_TX_RING_COUNT > 3
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ3_desc_queued", CTLFLAG_RD, &sc->tx_ring[3].desc_queued,
 	    0, "Tx AC3 descriptors queued");
@@ -2603,7 +2610,9 @@ rt_sysctl_attach(struct rt_softc *sc)
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ3_data_queued", CTLFLAG_RD, &sc->tx_ring[3].data_queued,
 	    0, "Tx AC3 data queued");
+#endif
 
+#if RT_SOFTC_TX_RING_COUNT > 2
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ2_desc_queued", CTLFLAG_RD, &sc->tx_ring[2].desc_queued,
 	    0, "Tx AC2 descriptors queued");
@@ -2611,7 +2620,9 @@ rt_sysctl_attach(struct rt_softc *sc)
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ2_data_queued", CTLFLAG_RD, &sc->tx_ring[2].data_queued,
 	    0, "Tx AC2 data queued");
+#endif
 
+#if RT_SOFTC_TX_RING_COUNT > 1
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ1_desc_queued", CTLFLAG_RD, &sc->tx_ring[1].desc_queued,
 	    0, "Tx AC1 descriptors queued");
@@ -2619,6 +2630,7 @@ rt_sysctl_attach(struct rt_softc *sc)
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ1_data_queued", CTLFLAG_RD, &sc->tx_ring[1].data_queued,
 	    0, "Tx AC1 data queued");
+#endif
 
 	SYSCTL_ADD_INT(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ0_desc_queued", CTLFLAG_RD, &sc->tx_ring[0].desc_queued,
@@ -2628,17 +2640,23 @@ rt_sysctl_attach(struct rt_softc *sc)
 	    "TXQ0_data_queued", CTLFLAG_RD, &sc->tx_ring[0].data_queued,
 	    0, "Tx AC0 data queued");
 
+#if RT_SOFTC_TX_RING_COUNT > 3
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ3_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[3],
 	    "Tx AC3 data queue full");
+#endif
 
+#if RT_SOFTC_TX_RING_COUNT > 2
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ2_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[2],
 	    "Tx AC2 data queue full");
+#endif
 
+#if RT_SOFTC_TX_RING_COUNT > 1
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ1_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[1],
 	    "Tx AC1 data queue full");
+#endif
 
 	SYSCTL_ADD_ULONG(ctx, SYSCTL_CHILDREN(stats), OID_AUTO,
 	    "TXQ0_data_queue_full", CTLFLAG_RD, &sc->tx_data_queue_full[0],
