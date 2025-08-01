@@ -318,6 +318,10 @@ setup_ring(struct sc_pcminfo *scp)
 		desc->Ca[0] = 1 << 20;
 		desc->Cb[0] = 2 << 20;
 
+		chn_intr(ch->channel);
+		++sc->pos;
+		sc->pos %= PCM_RX_RING_COUNT;
+
 		++desc;
 	}
 
@@ -383,7 +387,8 @@ ar71xx_pcm_stop(struct sc_pcminfo *scp)
 	sc = scp->sc;
 
 	ATH_WRITE_REG(AR71XX_MBOX_INT_ENABLE, 0);
-	ATH_WRITE_REG(AR71XX_MBOX_DMA_RX_CONTROL, 1 << 2);
+//	ATH_WRITE_REG(AR71XX_MBOX_DMA_RX_CONTROL, 1 << 2);
+	ATH_WRITE_REG(AR71XX_MBOX_DMA_RX_CONTROL, 1);
 	reg = ATH_READ_REG(AR71XX_MBOX_INT_STATUS);
 
 	return (0);
