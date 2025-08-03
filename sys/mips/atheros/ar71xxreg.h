@@ -493,6 +493,10 @@ typedef enum {
 #define	AR71XX_MBOX_FIFO_RESET			(AR71XX_MBOX_BASE + 0x58)
 #define	AR71XX_SLIC_MBOX_FIFO_RESET		(AR71XX_MBOX_BASE + 0x5c)
 
+#define	AR71XX_MBOX_DMA_PAUSE			0x1
+#define	AR71XX_MBOX_DMA_START			0x2
+#define	AR71XX_MBOX_DMA_RESUME			0x4
+
 /*
  *  Len. mismatch, unsup. opcode and short frmae bits excluded
  */
