@@ -161,18 +161,22 @@ static int
 mtkswitch_reg_read(device_t dev, int reg)
 {
 	struct mtkswitch_softc *sc = device_get_softc(dev);
+#if 0
 	uint32_t val;
 
 	val = sc->hal.mtkswitch_read(sc, MTKSWITCH_REG32(reg));
 	if (MTKSWITCH_IS_HI16(reg))
 		return (MTKSWITCH_HI16(val));
 	return (MTKSWITCH_LO16(val));
+#endif
+	return (sc->hal.mtkswitch_read(sc, MTKSWITCH_REG32(reg)));
 }
 
 static int
 mtkswitch_reg_write(device_t dev, int reg, int val)
 {
 	struct mtkswitch_softc *sc = device_get_softc(dev);
+#if 0
 	uint32_t tmp;
 
 	tmp = sc->hal.mtkswitch_read(sc, MTKSWITCH_REG32(reg));
@@ -184,6 +188,8 @@ mtkswitch_reg_write(device_t dev, int reg, int val)
 		tmp |= MTKSWITCH_TO_LO16(val);
 	}
 	sc->hal.mtkswitch_write(sc, MTKSWITCH_REG32(reg), tmp);
+#endif
+	sc->hal.mtkswitch_write(sc, MTKSWITCH_REG32(reg), val);
 
 	return (0);
 }
