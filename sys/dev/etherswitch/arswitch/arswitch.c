@@ -636,6 +636,9 @@ arswitch_attach(device_t dev)
 	if (sc->numphys > AR8X16_NUM_PHYS)
 		sc->numphys = AR8X16_NUM_PHYS;
 
+	if (AR8X16_IS_SWITCH(sc, AR8316) && sc->numphys == 5)
+		sc->info.es_nports = 6;
+
 	/* Reset the switch. */
 	if (arswitch_reset(dev)) {
 		DPRINTF(sc, ARSWITCH_DBG_ANY,
