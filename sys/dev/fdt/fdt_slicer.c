@@ -58,6 +58,7 @@ fill_slices_from_node(phandle_t node, struct flash_slice *slices, int *count)
 	u_long base, size;
 	int flags, i;
 	ssize_t nmlen;
+	int pad;
 
 	i = 0;
 	for (child = OF_child(node); child != 0; child = OF_peer(child)) {
@@ -97,6 +98,14 @@ fill_slices_from_node(phandle_t node, struct flash_slice *slices, int *count)
 
 		if (OF_hasprop(child, "read-only"))
 			flags |= FLASH_SLICES_FLAG_RO;
+
+		if (OF_getencprop(child, "openwrt,padding", &pad,
+		    sizeof(pad)) == sizeof(pad)) {
+			if (pad == 32)
+				flags |= FLASH_SLICES_FLAG_PAD32;
+			else if (pad == 96)
+				flags |= FLASH_SLICES_FLAG_PAD96;
+		}
 
 		/* Fill slice entry data. */
 		slices[i].base = base;

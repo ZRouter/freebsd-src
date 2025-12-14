@@ -38,6 +38,8 @@
 
 #define	FLASH_SLICES_FLAG_NONE		0
 #define	FLASH_SLICES_FLAG_RO		1	/* Read only */
+#define	FLASH_SLICES_FLAG_PAD32		2
+#define	FLASH_SLICES_FLAG_PAD96		4
 
 #define	FLASH_SLICES_FMT		"%ss.%s"
 
