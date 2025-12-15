@@ -65,8 +65,8 @@ fill_slices_from_node(phandle_t node, struct flash_slice *slices, int *count)
 		flags = FLASH_SLICES_FLAG_NONE;
 
 		/* Nodes with a compatible property are not slices. */
-		if (OF_hasprop(child, "compatible"))
-			continue;
+//		if (OF_hasprop(child, "compatible"))
+//			continue;
 
 		if (i == FLASH_SLICES_MAX_NUM) {
 			debugf("not enough buffer for slice i=%d\n", i);
