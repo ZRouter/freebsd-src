@@ -128,7 +128,7 @@ static struct mx25l_flash_ident flash_devices[] = {
 	{ "mx25l1606e", 0xc2, 0x2015, 64 * 1024, 32, FL_ERASE_4K},
 	{ "mx25ll32",	0xc2, 0x2016, 64 * 1024, 64, FL_NONE },
 	{ "mx25ll64",	0xc2, 0x2017, 64 * 1024, 128, FL_NONE },
-	{ "mx25ll128",	0xc2, 0x2018, 64 * 1024, 256, FL_NONE },
+	{ "mx25ll128",	0xc2, 0x2018, 64 * 1024, 256, FL_ERASE_4K | FL_ERASE_32K },
 	{ "mx25ll256",	0xc2, 0x2019, 64 * 1024, 512, FL_ERASE_4K | FL_ERASE_32K | FL_ENABLE_4B_ADDR },
 	{ "s25fl032",	0x01, 0x0215, 64 * 1024, 64, FL_NONE },
 	{ "s25fl064",	0x01, 0x0216, 64 * 1024, 128, FL_NONE },
@@ -141,9 +141,8 @@ static struct mx25l_flash_ident flash_devices[] = {
 	{ "w25x32",	0xef, 0x3016, 64 * 1024, 64, FL_ERASE_4K },
 	{ "w25x64",	0xef, 0x3017, 64 * 1024, 128, FL_ERASE_4K },
 	{ "w25q32",	0xef, 0x4016, 64 * 1024, 64, FL_ERASE_4K },
-//	{ "w25q64",	0xef, 0x4017, 64 * 1024, 128, FL_ERASE_4K },
-//	{ "w25q64bv",	0xef, 0x4017, 64 * 1024, 128, FL_ERASE_4K },
-	{ "w25q64",	0xef, 0x4017, 64 * 1024, 128, FL_NONE },
+	{ "w25q64",	0xef, 0x4017, 64 * 1024, 128, FL_ERASE_4K },
+	{ "w25q64bv",	0xef, 0x4017, 64 * 1024, 128, FL_ERASE_4K },
 	{ "w25q128",	0xef, 0x4018, 64 * 1024, 256, FL_ERASE_4K },
 	{ "w25q256",	0xef, 0x4019, 64 * 1024, 512, FL_ERASE_4K },
 
@@ -238,7 +237,7 @@ mx25l_set_writable(struct mx25l_softc *sc, int writable)
 }
 
 static int
-mx25l_erase_cmd(struct mx25l_softc *sc, off_t sector)
+mx25l_erase_cmd(struct mx25l_softc *sc, off_t sector, off_t count)
 {
 	uint8_t txBuf[5], rxBuf[5];
 	struct spi_command cmd;
@@ -254,9 +253,9 @@ mx25l_erase_cmd(struct mx25l_softc *sc, off_t sector)
 	cmd.tx_cmd = txBuf;
 	cmd.rx_cmd = rxBuf;
 
-	if (sc->sc_flags & FL_ERASE_4K)
+	if (sc->sc_flags & FL_ERASE_4K && count == 4 * 1024)
 		txBuf[0] = CMD_BLOCK_4K_ERASE;
-	else if (sc->sc_flags & FL_ERASE_32K)
+	else if (sc->sc_flags & FL_ERASE_32K && count == 32 *1024)
 		txBuf[0] = CMD_BLOCK_32K_ERASE;
 	else
 		txBuf[0] = CMD_SECTOR_ERASE;
@@ -308,10 +307,16 @@ mx25l_write(struct mx25l_softc *sc, off_t offset, caddr_t data, off_t count)
 	 * Maximum write size for CMD_PAGE_PROGRAM is FLASH_PAGE_SIZE, so loop
 	 * to write chunks of FLASH_PAGE_SIZE bytes each.
 	 */
+	int erasize;
+	if (count >= 64 * 1024)
+		erasize = 64 * 1024;
+	else
+		erasize = count;
 	while (count != 0) {
 		/* If we crossed a sector boundary, erase the next sector. */
-		if (((offset) % sc->sc_erasesize) == 0) {
-			err = mx25l_erase_cmd(sc, offset);
+//		if (((offset) % sc->sc_erasesize) == 0) {
+		if (((offset) % erasize) == 0) {
+			err = mx25l_erase_cmd(sc, offset, count);
 			if (err)
 				break;
 		}
