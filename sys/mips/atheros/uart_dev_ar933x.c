@@ -396,7 +396,6 @@ ar933x_bus_attach(struct uart_softc *sc)
 	    ar71xx_soc == AR71XX_SOC_QCA9556 ||
 	    ar71xx_soc == AR71XX_SOC_QCA9558)
 		reg |= 0x188;
-	}
 	reg |= AR933X_UART_CS_HOST_INT_EN;
 	ar933x_setreg(bas, AR933X_UART_CS_REG, reg);
 
