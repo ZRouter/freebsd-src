@@ -67,8 +67,6 @@ static driver_t uart_ar934x_hs_driver = {
 	sizeof(struct uart_softc),
 };
 
-extern SLIST_HEAD(uart_devinfo_list, uart_devinfo) uart_sysdevs;
-
 static int
 uart_ar934x_hs_probe(device_t dev)
 {
