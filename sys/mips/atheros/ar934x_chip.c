@@ -202,6 +202,8 @@ ar934x_chip_detect_sys_frequency(void)
 		printf("%s: mdio=%d Hz\n", __func__, u_ar71xx_refclk);
 		u_ar71xx_mdio_freq = u_ar71xx_refclk;
 	}
+//	reg |= AR934X_PLL_SWITCH_CLOCK_CONTROL_UART1_CLK_SEL;
+//	ATH_WRITE_REG(AR934X_PLL_SWITCH_CLOCK_CONTROL_REG, reg);
 }
 
 static void

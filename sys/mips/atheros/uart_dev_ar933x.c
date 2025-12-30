@@ -39,6 +39,7 @@ __FBSDID("$FreeBSD$");
 #include <dev/uart/uart_cpu.h>
 #include <dev/uart/uart_bus.h>
 
+#include <mips/atheros/ar71xx_setup.h>
 #include <mips/atheros/ar933x_uart.h>
 
 #include "uart_if.h"
@@ -387,6 +388,15 @@ ar933x_bus_attach(struct uart_softc *sc)
 
 	/* Enable the host interrupt now */
 	reg = ar933x_getreg(bas, AR933X_UART_CS_REG);
+	if (ar71xx_soc == AR71XX_SOC_AR9341 ||
+	    ar71xx_soc == AR71XX_SOC_AR9342 ||
+	    ar71xx_soc == AR71XX_SOC_AR9344 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9533 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9533_V2 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9556 ||
+	    ar71xx_soc == AR71XX_SOC_QCA9558)
+		reg |= 0x188;
+	}
 	reg |= AR933X_UART_CS_HOST_INT_EN;
 	ar933x_setreg(bas, AR933X_UART_CS_REG, reg);
 
