@@ -592,7 +592,8 @@ ar71xx_pcm_configure_clocks(struct ar71xx_pcm_softc *sc)
 		ar934x_pcm_setpll(sc, pcm_freq);
 	}
 
-	device_printf(dev, "Frequency ar71xx_pcm %d\n", (uint32_t)pcm_freq);
+	device_printf(dev, "Frequency ar71xx_pcm %d, refclk %d MHz\n",
+	    (uint32_t)pcm_freq, u_ar71xx_refclk / 1000000);
 
 	return (0);
 }
