@@ -1111,7 +1111,7 @@ udl_select_mode(struct udl_softc *sc)
 	/*
 	 * If no mode found use default.
 	 */
-#if defined(__mips__)   // mips soc module is small memory then allways SVGA
+#if !defined(__mips__)   // mips soc module is small memory then allways SVGA
 	if (sc->sc_cur_mode == UDL_MAX_MODES)
 #endif
 		sc->sc_cur_mode = udl_lookup_mode(800, 600, 60, sc->sc_chip, 0);
